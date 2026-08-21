@@ -12,8 +12,11 @@ from src.providers.base import LLMProvider, StreamChunk
 from src.providers.registry import ProviderRegistry
 from src.tools.base import BaseTool, ToolCall, ToolDefinition, ToolResult
 from src.tools.filesystem import FindFilesTool, GrepSearchTool, ListDirTool, ReadFileTool, WriteFileTool
+from src.context.semantic_indexer import SemanticIndexer, SemanticSearchTool
 from src.tools.git_ops import create_checkpoint_commit
+from src.tools.mcp_client import McpManager
 from src.tools.terminal import RunCommandTool
+from src.tools.web_tools import ReadUrlTool, WebSearchTool
 from src.ui.console import ask_user_confirmation, console, print_diff, print_tool_execution, print_tool_result
 
 
@@ -23,6 +26,8 @@ class Agent:
         self.session = session or Session()
         self.provider: LLMProvider = ProviderRegistry.create_provider()
         self.architect_provider: Optional[LLMProvider] = architect_provider
+        self.indexer = SemanticIndexer(self.config.project_root)
+        self.mcp_manager = McpManager(self.config.project_root)
         
         # Registrar ferramentas disponíveis
         self.tools: Dict[str, BaseTool] = {
@@ -31,8 +36,13 @@ class Agent:
             "list_dir": ListDirTool(),
             "grep_search": GrepSearchTool(),
             "find_files": FindFilesTool(),
-            "run_command": RunCommandTool()
+            "run_command": RunCommandTool(),
+            "semantic_search": SemanticSearchTool(self.indexer),
+            "web_search": WebSearchTool(),
+            "read_url": ReadUrlTool()
         }
+        # Registrar ferramentas de servidores MCP externos se configurados
+        self.mcp_manager.register_tools_to_agent(self)
 
     def set_model(self, model_name: str) -> None:
         self.config.active_model = model_name
@@ -74,6 +84,19 @@ class Agent:
 
         print_tool_result(tool_name, result.success, result.output)
         return result
+
+    def _print_token_usage(self, prompt_text_or_msgs: Any, response_text: str) -> None:
+        """Calcula e exibe a estimativa de tokens utilizados na iteração e o total acumulado."""
+        if isinstance(prompt_text_or_msgs, list):
+            prompt_chars = sum(len(getattr(m, "content", "")) for m in prompt_text_or_msgs)
+        else:
+            prompt_chars = len(str(prompt_text_or_msgs))
+        prompt_tokens = max(1, prompt_chars // 4)
+        completion_tokens = max(1, len(response_text) // 4)
+        total_tokens = prompt_tokens + completion_tokens
+        self.session.record_tokens(prompt_tokens, completion_tokens)
+        _, _, cumulative_total = self.session.get_cumulative_tokens()
+        console.print(f"[dim]⚡ Tokens: ~{prompt_tokens} prompt + ~{completion_tokens} completion = ~{total_tokens} total | Sessão acumulada: ~{cumulative_total}[/dim]")
 
     def get_architect_provider(self) -> LLMProvider:
         if self.architect_provider is not None:
@@ -126,6 +149,9 @@ class Agent:
                 has_error = True
 
             console.print()  # Quebra de linha final
+
+            if stream_text:
+                self._print_token_usage(messages, stream_text)
 
             if has_error:
                 backup_model = ProviderRegistry.find_backup_model(self.config.active_model)
@@ -221,6 +247,9 @@ class Agent:
 
         console.print()
 
+        if arch_text:
+            self._print_token_usage(messages, arch_text)
+
         if not arch_text:
             return ""
 
@@ -281,6 +310,9 @@ class Agent:
                 has_error = True
 
             console.print()
+
+            if stream_text:
+                self._print_token_usage(messages, stream_text)
 
             if has_error:
                 break

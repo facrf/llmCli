@@ -10,13 +10,16 @@ from prompt_toolkit.history import FileHistory, InMemoryHistory
 from prompt_toolkit.styles import Style
 from src.config import get_config, get_preferences
 from src.core.agent import Agent
+from src.core.exporter import SessionExporter
+from src.core.todo_manager import TodoManager
 from src.i18n import SUPPORTED_LANGUAGES, get_active_language, set_active_language, t
 from src.providers.registry import ProviderRegistry
 from src.providers.scanner import HostScanner
 from src.tools.git_ops import create_user_commit, get_git_diff, get_raw_git_diff, undo_last_checkpoint
 from src.ui.completer import CliCompleter, resolve_slash_command
 from src.ui.console import ask_user_confirmation, console, print_banner, print_diff, print_scan_results, print_status_table
-
+from rich.panel import Panel
+from rich.syntax import Syntax
 
 
 prompt_style = Style.from_dict({
@@ -33,6 +36,7 @@ class ReplSession:
     def __init__(self, agent: Agent) -> None:
         self.agent = agent
         self.config = get_config()
+        self.todo_manager = TodoManager()
         
         # Histórico persistente em ~/.llmcli_history
         history_path = Path.home() / ".llmcli_history"
@@ -373,9 +377,119 @@ class ReplSession:
             if full_text:
                 await self.agent.run_prompt(full_text)
 
+        elif command == "/index":
+            console.print("[dim]Indexando base de código para busca semântica...[/dim]")
+            count = self.agent.indexer.index_codebase()
+            console.print(f"[bold green]✓ Base de código indexada com sucesso:[/bold green] [bold yellow]{count}[/bold yellow] blocos de código mapeados.")
+
+        elif command == "/search":
+            if not arg:
+                console.print("[dim]Use '/search <termo/conceito/função>' para buscar trechos no código indexado.[/dim]")
+            else:
+                results = self.agent.indexer.search(arg, top_k=5)
+                if not results:
+                    console.print(f"[yellow]Nenhum resultado relevante encontrado para:[/yellow] '{arg}'")
+                else:
+                    console.print(f"[bold cyan]Resultados da busca semântica para '{arg}':[/bold cyan]")
+                    for r in results:
+                        lang = "python" if r.chunk.file_path.endswith(".py") else "text"
+                        console.print(Panel(
+                            Syntax(r.chunk.content, lang, line_numbers=True, start_line=r.chunk.start_line),
+                            title=f"{r.chunk.file_path} | {r.chunk.symbol_type}: {r.chunk.symbol_name} (Score: {r.score:.2f})",
+                            border_style="cyan"
+                        ))
+
+        elif command == "/web":
+            if not arg:
+                console.print("[dim]Use '/web <pesquisa>' para pesquisar na web via DuckDuckGo/Tavily.[/dim]")
+            else:
+                tool = self.agent.tools.get("web_search")
+                if tool:
+                    console.print(f"[dim]Pesquisando na web: '{arg}'...[/dim]")
+                    res = await tool.execute(query=arg)
+                    console.print(res.output)
+
+        elif command in ("/gentest", "/gentests", "/test-for"):
+            if not arg:
+                console.print("[dim]Use '/gentest <caminho_do_arquivo>' para gerar testes unitários automáticos com pytest (ex: /gentest src/config.py).[/dim]")
+            else:
+                target = (self.config.project_root / arg).resolve()
+                if not target.exists():
+                    console.print(f"[red]Arquivo '{arg}' não encontrado.[/red]")
+                else:
+                    from src.tools.test_generator import get_test_prompt_for_file
+                    prompt = get_test_prompt_for_file(target, self.config.project_root)
+                    console.print(f"[bold cyan]Gerando testes unitários completos com pytest para [yellow]{arg}[/yellow]...[/bold cyan]")
+                    await self.agent.run_prompt(prompt)
+
+        elif command == "/todo":
+            if not arg:
+                console.print(self.todo_manager.format_checklist())
+            elif arg.startswith("add "):
+                item = self.todo_manager.add_item(arg[4:])
+                console.print(f"[green]✓ Tarefa #{item.id} adicionada:[/green] {item.text}")
+            elif arg.startswith("check ") or arg.startswith("done "):
+                try:
+                    tid = int(arg.split()[1])
+                    if self.todo_manager.check_item(tid):
+                        console.print(f"[bold green]✓ Tarefa #{tid} marcada como concluída![/bold green]")
+                    else:
+                        console.print(f"[red]Tarefa #{tid} não encontrada.[/red]")
+                except Exception:
+                    console.print("[red]Uso: /todo check <id>[/red]")
+            elif arg == "clear":
+                self.todo_manager.clear()
+                console.print("[green]✓ Lista de tarefas limpa com sucesso.[/green]")
+            else:
+                console.print("[dim]Uso: /todo, /todo add <tarefa>, /todo check <id>, /todo clear[/dim]")
+
+        elif command == "/plan":
+            if not arg:
+                console.print("[dim]Use '/plan <objetivo>' para planejar uma feature e gerar tarefas automáticas no /todo.[/dim]")
+            else:
+                plan_prompt = f"Crie um plano técnico detalhado passo a passo com checklist `- [ ]` para implementar o seguinte objetivo no projeto:\n\n{arg}"
+                resp = await self.agent.run_prompt(plan_prompt)
+                added = self.todo_manager.parse_plan(resp)
+                if added > 0:
+                    console.print(f"\n[bold green]✓ {added} tarefas extraídas automaticamente para o checklist /todo![/bold green]")
+
+        elif command == "/export":
+            exporter = SessionExporter(self.agent.session, self.config.project_root)
+            fmt = "md"
+            target_path = None
+            if arg:
+                parts_exp = arg.split(maxsplit=1)
+                if parts_exp[0].lower() in ("html", "htm"):
+                    fmt = "html"
+                    if len(parts_exp) > 1:
+                        target_path = Path(parts_exp[1])
+                else:
+                    target_path = Path(arg)
+                    if str(target_path).endswith(".html"):
+                        fmt = "html"
+
+            if fmt == "html":
+                out_path = exporter.export_html(target_path)
+            else:
+                out_path = exporter.export_markdown(target_path)
+            console.print(f"[bold green]✓ Sessão exportada com sucesso em:[/bold green] [bold yellow]{out_path}[/bold yellow]")
+
+        elif command == "/mcp":
+            servers = self.agent.mcp_manager.servers
+            if not servers:
+                console.print("[dim]Nenhum servidor MCP configurado. Crie um arquivo [bold]mcp_servers.json[/bold] ou [bold]~/.llmcli_mcp.json[/bold].[/dim]")
+            else:
+                console.print(f"[bold cyan]Servidores MCP Configurados ({len(servers)}):[/bold cyan]")
+                for s_name, s_cfg in servers.items():
+                    console.print(f"  🔌 [bold yellow]{s_name}[/bold yellow]: comando='{s_cfg.command}' args={s_cfg.args}")
+                mcp_tools = [k for k in self.agent.tools if k.startswith("mcp_")]
+                console.print(f"[dim]Ferramentas MCP dinâmicas ativas: {len(mcp_tools)}[/dim]")
+
         elif command == "/tokens":
             tokens = self.agent.session.estimate_tokens()
+            p_tok, c_tok, tot_tok = self.agent.session.get_cumulative_tokens()
             console.print(f"Estimativa atual de contexto: [bold cyan]~{tokens} tokens[/bold cyan]")
+            console.print(f"Tokens acumulados nesta sessão: [bold yellow]~{tot_tok} tokens[/bold yellow] (~{p_tok} prompt + ~{c_tok} completion)")
 
         elif command == "/help":
             self._print_help()
@@ -395,24 +509,33 @@ class ReplSession:
   [bold yellow]/host <ip/host>[/bold yellow]   - Conecta ao host e define como servidor local ativo (ex: /host 192.168.0.11)
   [bold yellow]/model <nome>[/bold yellow]     - Troca o modelo de LLM (carrega preferências salvas daquele modelo)
   [bold yellow]/models[/bold yellow]           - Exibe lista e status de todos os provedores locais e na nuvem
+  [bold yellow]/mcp[/bold yellow]              - Lista servidores MCP e ferramentas externas ativas
 
   [bold yellow]/add <caminho>[/bold yellow]    - Adiciona arquivo ou diretório ao contexto da IA
   [bold yellow]/drop <caminho>[/bold yellow]   - Remove arquivo do contexto
   [bold yellow]/files[/bold yellow]            - Lista arquivos carregados no contexto atual
+  [bold yellow]/index[/bold yellow]            - Indexa a base de código para busca semântica local
+  [bold yellow]/search <termo>[/bold yellow]  - Realiza busca semântica/RAG no código indexado
+  [bold yellow]/web <termo>[/bold yellow]     - Pesquisa na web (DuckDuckGo/Tavily) e traz respostas atualizadas
+
   [bold yellow]/diff[/bold yellow]             - Exibe alterações Git não commitadas
   [bold yellow]/commit [msg][/bold yellow]      - Gera commit semântico via IA ou cria commit direto
   [bold yellow]/review[/bold yellow]           - Executa Code Review das alterações Git pendentes
   [bold yellow]/undo[/bold yellow]             - Reverte a última modificação ou commit gerado pela IA
   [bold yellow]/test [args][/bold yellow]      - Roda testes (pytest) e sugere correção automática se falhar
+  [bold yellow]/gentest <arq>[/bold yellow]    - Gera suíte completa de testes unitários com pytest para o arquivo
   [bold yellow]/run <comando>[/bold yellow]   - Executa comando no terminal da raiz do projeto
 
+  [bold yellow]/plan <objetivo>[/bold yellow] - Cria plano estruturado e gera tarefas automáticas no /todo
+  [bold yellow]/todo [add|check][/bold yellow] - Gerencia checklist interativo de tarefas da sessão
+  [bold yellow]/export [md|html][/bold yellow] - Exporta relatório completo da sessão em Markdown ou HTML
   [bold yellow]/paste[/bold yellow]            - Inicia modo multilinha para colar blocos de código
   [bold yellow]/compact[/bold yellow]          - Compacta o histórico da conversa gerando resumo consolidado
   [bold yellow]/temp [valor][/bold yellow]     - Exibe ou altera a temperatura (salva por LLM e global)
   [bold yellow]/system [txt][/bold yellow]     - Exibe, altera ou redefine o system prompt (ex: /system reset)
   [bold yellow]/clear[/bold yellow]            - Limpa o histórico de mensagens da conversa
   [bold yellow]/reset [prefs|all][/bold yellow] - Limpa sessão ou redefine preferências salvas do usuário
-  [bold yellow]/tokens[/bold yellow]           - Exibe estimativa de tokens do contexto
+  [bold yellow]/tokens[/bold yellow]           - Exibe estimativa de tokens do contexto e da sessão
   [bold yellow]/help[/bold yellow]             - Mostra este menu de ajuda
   [bold yellow]/exit, /quit[/bold yellow]      - Sai do programa
         """)

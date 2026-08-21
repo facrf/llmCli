@@ -49,6 +49,16 @@ class Session:
         self.file_tracker = file_tracker or FileTracker()
         self.messages: List[ChatMessage] = []
         self.custom_system_prompt: Optional[str] = None
+        self.cumulative_prompt_tokens: int = 0
+        self.cumulative_completion_tokens: int = 0
+
+    def record_tokens(self, prompt_tokens: int, completion_tokens: int) -> None:
+        self.cumulative_prompt_tokens += max(0, prompt_tokens)
+        self.cumulative_completion_tokens += max(0, completion_tokens)
+
+    def get_cumulative_tokens(self) -> tuple[int, int, int]:
+        total = self.cumulative_prompt_tokens + self.cumulative_completion_tokens
+        return self.cumulative_prompt_tokens, self.cumulative_completion_tokens, total
 
     def set_custom_system_prompt(self, prompt: str) -> None:
         """Define um prompt de sistema personalizado para a sessão atual."""
