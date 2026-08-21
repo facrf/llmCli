@@ -16,52 +16,24 @@ console = Console()
 def print_banner(active_model: str, yolo_mode: bool) -> None:
     yolo_badge = "[bold red]⚡ YOLO: ON[/bold red]" if yolo_mode else "[bold green]🛡️ YOLO: OFF[/bold green]"
     
-    flag_lines = [
-        "[bold green]  .----------------------------.  [/bold green]",
-        "[bold green] / [/bold green][bold yellow]             /\\             [/bold yellow][bold green] \\ [/bold green]",
-        "[bold green]| [/bold green][bold yellow]             /  \\            [/bold yellow][bold green] |[/bold green]",
-        "[bold green]| [/bold green][bold yellow]            /    \\           [/bold yellow][bold green] |[/bold green]",
-        "[bold green]| [/bold green][bold yellow]           /  [/bold yellow][bold blue]/\\  [/bold blue][bold yellow]\\          [/bold yellow][bold green] |[/bold green]",
-        "[bold green]| [/bold green][bold yellow]          <  [/bold yellow][bold blue]([/bold blue][bold white]★ ✰[/bold white][bold blue])[/bold blue][bold yellow]  >         [/bold yellow][bold green] |[/bold green]",
-        "[bold green]| [/bold green][bold yellow]           \\  [/bold yellow][bold blue]\\/  [/bold blue][bold yellow]/          [/bold yellow][bold green] |[/bold green]",
-        "[bold green]| [/bold green][bold yellow]            \\    /           [/bold yellow][bold green] |[/bold green]",
-        "[bold green]| [/bold green][bold yellow]             \\  /            [/bold yellow][bold green] |[/bold green]",
-        "[bold green] \\ [/bold green][bold yellow]             \\/             [/bold yellow][bold green] / [/bold green]",
-        "[bold green]  '----------------------------'  [/bold green]"
-    ]
-    flag_text = "\n".join(flag_lines)
-    
     title_art = (
-        "[bold bright_green]█░░ █░░ █▀▄▀█ █▀▀ █░░ ▀█ ▄▄ █▄▄ █▀█[/bold bright_green]\n"
-        "[bold bright_green]█▄▄ █▄▄ █░▀░█ █▄▄ █▄▄ ░█ ░░ █▄█ █▀▄[/bold bright_green]"
+        "🇧🇷 [bold bright_green]█░░ █░░ █▀▄▀█ █▀▀ █░░ ▀█ ▄▄ █▄▄ █▀█[/bold bright_green]\n"
+        "   [bold bright_green]█▄▄ █▄▄ █░▀░█ █▄▄ █▄▄ ░█ ░░ █▄█ █▀▄[/bold bright_green]"
     )
     
-    sep = "[dim]──────────────────────────────────[/dim]"
-    info_lines = [
-        title_art,
-        "[bold green]llmCli-BR[/bold green] [dim]• IA de Código Híbrida[/dim]",
-        sep,
-        f"• [bold white]Modelo:[/bold white] [bold yellow]{active_model}[/bold yellow]",
-        f"• [bold white]Status:[/bold white] {yolo_badge}",
-        f"• [bold white]Suporte:[/bold white] [dim]Local (8080/11434) & Nuvem[/dim]",
-        sep,
-        "[dim]Digite [bold green]/help[/bold green] p/ ajuda ou [bold yellow]/model[/bold yellow][/dim]"
-    ]
-    info_text = "\n".join(info_lines)
+    sep = "[dim]───────────────────────────────────────────────────────────────────[/dim]"
     
-    grid = Table.grid(padding=(0, 2))
-    grid.add_column("Flag", vertical="middle")
-    grid.add_column("Info", vertical="middle")
-    grid.add_row(flag_text, info_text)
-    
-    panel = Panel(
-        grid,
-        title="[bold green]🇧🇷 llmCli-BR[/bold green]",
-        title_align="left",
-        border_style="bright_green",
-        padding=(0, 1)
+    body = (
+        f"{title_art}\n\n"
+        f"🇧🇷 [bold green]llmCli-BR[/bold green] [bold cyan]— Assistente IA de Código Híbrido[/bold cyan] [dim](Local & Nuvem)[/dim]\n"
+        f"{sep}\n"
+        f"• [bold white]Modelo Ativo:[/bold white]   [bold yellow]{active_model}[/bold yellow]  [dim]|[/dim]  [bold white]Modo:[/bold white] {yolo_badge}\n"
+        f"• [bold white]Endpoints:[/bold white]      [dim]llama.cpp (8080) | Ollama (11434) | LM Studio | Nuvem[/dim]\n"
+        f"{sep}\n"
+        f"[dim]Digite [bold green]/help[/bold green] para comandos, [bold yellow]/model[/bold yellow] para trocar IA ou [bold cyan]/scan[/bold cyan] para escanear a rede.[/dim]"
     )
-    console.print(panel)
+    
+    console.print(Panel(body, border_style="bright_green", padding=(1, 2)))
 
 
 def print_diff(diff_text: str, filename: str = "") -> None:
