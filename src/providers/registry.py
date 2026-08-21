@@ -29,7 +29,7 @@ class ProviderRegistry:
                 provider_type, model_name = "gemini", model_str
             elif "claude" in raw:
                 provider_type, model_name = "anthropic", model_str
-            elif "gpt" in raw or "o1" in raw or "o3" in raw:
+            elif "codex" in raw or "gpt" in raw or "o1" in raw or "o3" in raw:
                 provider_type, model_name = "openai", model_str
             elif "deepseek" in raw:
                 provider_type, model_name = "deepseek", model_str
@@ -77,10 +77,14 @@ class ProviderRegistry:
                 model_name=model_name
             )
 
-        elif provider_type == "openai":
+        elif provider_type in ("openai", "gpt", "codex"):
+            # Mapeamento para OpenAI (suporte a gpt-4o, o1, o3-mini ou codex)
+            target_model = model_name
+            if model_name.lower() in ("codex", "default"):
+                target_model = os.getenv("OPENAI_CODEX_MODEL", "gpt-4o")
             return OpenAICompatibleProvider(
-                model_name=model_name,
-                base_url="https://api.openai.com/v1",
+                model_name=target_model,
+                base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
                 api_key=os.getenv("OPENAI_API_KEY", "")
             )
 

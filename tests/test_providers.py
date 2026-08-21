@@ -26,6 +26,17 @@ def test_provider_resolution():
     p_openai = ProviderRegistry.create_provider("openai/gpt-4o")
     assert isinstance(p_openai, OpenAICompatibleProvider)
 
+    p_gpt_codex = ProviderRegistry.create_provider("gpt/codex")
+    assert isinstance(p_gpt_codex, OpenAICompatibleProvider)
+    assert p_gpt_codex.model_name in ("gpt-4o", "codex")
+
+    p_codex = ProviderRegistry.create_provider("codex")
+    assert isinstance(p_codex, OpenAICompatibleProvider)
+
+    p_gpt = ProviderRegistry.create_provider("gpt/gpt-4o-mini")
+    assert isinstance(p_gpt, OpenAICompatibleProvider)
+    assert p_gpt.model_name == "gpt-4o-mini"
+
 
 def test_gemini_message_conversion():
     provider = GeminiProvider(model_name="gemini-2.5-flash", api_key="dummy_key")
