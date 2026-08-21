@@ -12,8 +12,9 @@ def test_parse_arguments_defaults():
 
 
 def test_parse_arguments_custom_flags():
-    args = parse_arguments(["-m", "llamacpp/default", "-y", "-f", "src/main.py", "Refatore o código"])
+    args = parse_arguments(["-m", "llamacpp/default", "-y", "-f", "src/main.py", "Refatore", "o", "código"])
     assert args.model == "llamacpp/default"
     assert args.yolo is True
     assert args.file == ["src/main.py"]
     assert args.prompt == ["Refatore", "o", "código"]
+

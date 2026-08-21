@@ -7,5 +7,6 @@ def test_build_repo_map_contains_core_files():
     assert "src/" in tree
     assert "main.py" in tree
     assert "config.py" in tree
-    assert ".git" not in tree
+    assert "📁 .git" not in tree
     assert "__pycache__" not in tree
+

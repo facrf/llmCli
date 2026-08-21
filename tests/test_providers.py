@@ -7,6 +7,7 @@ from src.providers.gemini import GeminiProvider
 from src.providers.anthropic import AnthropicProvider
 from src.providers.openai_compatible import OpenAICompatibleProvider
 from src.providers.base import ChatMessage
+from src.tools.base import ToolDefinition
 
 
 def test_provider_resolution():
@@ -39,3 +40,31 @@ def test_gemini_message_conversion():
     assert len(contents) == 2
     assert contents[0]["role"] == "user"
     assert contents[1]["role"] == "model"
+
+
+def test_anthropic_message_conversion():
+    provider = AnthropicProvider(model_name="claude-3-7-sonnet-20250219", api_key="dummy_key")
+    messages = [
+        ChatMessage(role="system", content="System instruction."),
+        ChatMessage(role="user", content="User prompt.")
+    ]
+    sys_prompt, converted = provider._convert_messages(messages)
+    assert sys_prompt == "System instruction."
+    assert len(converted) == 1
+    assert converted[0]["role"] == "user"
+    assert converted[0]["content"] == "User prompt."
+
+
+def test_openai_tool_conversion():
+    provider = OpenAICompatibleProvider(model_name="gpt-4o", api_key="dummy_key")
+    tools = [
+        ToolDefinition(
+            name="read_file",
+            description="Reads a file",
+            parameters={"type": "object", "properties": {"path": {"type": "string"}}}
+        )
+    ]
+    converted_tools = provider._convert_tools(tools)
+    assert len(converted_tools) == 1
+    assert converted_tools[0]["type"] == "function"
+    assert converted_tools[0]["function"]["name"] == "read_file"
