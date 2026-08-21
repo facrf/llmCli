@@ -107,6 +107,8 @@ Com inclusão de arquivos e modo YOLO ativado:
 
 ## 📚 Próximos Passos
 
+- [Descoberta de Modelos por IP](file:///storage/www/projetos/utils/llmCli/docs/network_discovery.md): Como escanear máquinas na rede e conectar a servidores remotos.
 - [Provedores e Modelos](file:///storage/www/projetos/utils/llmCli/docs/models_and_providers.md): Como configurar e subir servidores llama.cpp, Ollama e modelos de nuvem.
 - [Comandos e Modo YOLO](file:///storage/www/projetos/utils/llmCli/docs/commands_and_yolo.md): Aprenda todos os comandos slash disponíveis.
+
 - [Ferramentas e Segurança](file:///storage/www/projetos/utils/llmCli/docs/tools_and_safety.md): Entenda os checkpoints automáticos do Git e restrições do workspace.

@@ -4,7 +4,24 @@ O **llmCli** suporta uma arquitetura híbrida universal. Você pode alternar ent
 
 ---
 
-## 🦙 1. Provedores Locais
+## 📡 1. Descoberta Automática de Modelos por IP
+
+Se você possui servidores de LLM rodando em outra máquina da rede (ex: `192.168.0.11` com GPU dedicada), utilize o recurso de descoberta automática:
+
+```bash
+# Escanear e listar modelos do IP
+./bin/llm-cli --scan 192.168.0.11
+
+# Conectar diretamente
+./bin/llm-cli --host 192.168.0.11 --yolo
+```
+
+Para detalhes completos de portas e configurações, consulte o [Guia de Descoberta por IP](file:///storage/www/projetos/utils/llmCli/docs/network_discovery.md).
+
+---
+
+## 🦙 2. Provedores Locais
+
 
 ### A. llama.cpp Server (Porta 8080)
 
