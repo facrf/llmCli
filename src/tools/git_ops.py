@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from typing import Optional, Tuple
 from src.config import get_config
+
 
 
 async def run_git_cmd(*args: str) -> Tuple[int, str, str]:
@@ -51,9 +53,13 @@ async def get_git_status() -> str:
 
 async def create_checkpoint_commit(message: str) -> Optional[str]:
     """Cria um commit automático como ponto de restauração."""
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        return None
+
     config = get_config()
     if not config.git.auto_commit_on_edit or not await is_git_repo():
         return None
+
 
     # Adicionar modificações
     await run_git_cmd("add", "-A")
