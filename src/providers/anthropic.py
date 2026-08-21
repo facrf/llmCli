@@ -29,14 +29,24 @@ class AnthropicProvider(LLMProvider):
             if msg.role == "system":
                 system_prompt += msg.content + "\n"
             elif msg.role == "tool":
-                converted.append({
-                    "role": "user",
-                    "content": [{
-                        "type": "tool_result",
-                        "tool_use_id": msg.tool_call_id or "tool_call_id",
-                        "content": msg.content
-                    }]
-                })
+                tool_block = {
+                    "type": "tool_result",
+                    "tool_use_id": msg.tool_call_id or "tool_call_id",
+                    "content": msg.content
+                }
+                if converted and converted[-1]["role"] == "user":
+                    if isinstance(converted[-1]["content"], list):
+                        converted[-1]["content"].append(tool_block)
+                    else:
+                        converted[-1]["content"] = [
+                            {"type": "text", "text": str(converted[-1]["content"])},
+                            tool_block
+                        ]
+                else:
+                    converted.append({
+                        "role": "user",
+                        "content": [tool_block]
+                    })
             elif msg.role == "assistant":
                 content_blocks = []
                 if msg.content:
@@ -51,7 +61,13 @@ class AnthropicProvider(LLMProvider):
                         })
                 converted.append({"role": "assistant", "content": content_blocks or [{"type": "text", "text": ""}]})
             else:
-                converted.append({"role": "user", "content": msg.content})
+                if converted and converted[-1]["role"] == "user":
+                    if isinstance(converted[-1]["content"], str):
+                        converted[-1]["content"] += "\n" + msg.content
+                    elif isinstance(converted[-1]["content"], list):
+                        converted[-1]["content"].append({"type": "text", "text": msg.content})
+                else:
+                    converted.append({"role": "user", "content": msg.content})
 
         return system_prompt.strip(), converted
 

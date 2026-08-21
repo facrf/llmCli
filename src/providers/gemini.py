@@ -32,10 +32,13 @@ class GeminiProvider(LLMProvider):
                     "parts": [{"text": msg.content}]
                 }
             elif msg.role == "user":
-                contents.append({
-                    "role": "user",
-                    "parts": [{"text": msg.content}]
-                })
+                if contents and contents[-1]["role"] == "user":
+                    contents[-1]["parts"].append({"text": msg.content})
+                else:
+                    contents.append({
+                        "role": "user",
+                        "parts": [{"text": msg.content}]
+                    })
             elif msg.role == "assistant":
                 parts: List[Dict[str, Any]] = []
                 if msg.content:
@@ -50,15 +53,19 @@ class GeminiProvider(LLMProvider):
                         })
                 contents.append({"role": "model", "parts": parts or [{"text": ""}]})
             elif msg.role == "tool":
-                contents.append({
-                    "role": "user",
-                    "parts": [{
-                        "functionResponse": {
-                            "name": msg.name or "tool_call",
-                            "response": {"output": msg.content}
-                        }
-                    }]
-                })
+                func_response_part = {
+                    "functionResponse": {
+                        "name": msg.name or "tool_call",
+                        "response": {"output": msg.content}
+                    }
+                }
+                if contents and contents[-1]["role"] == "user":
+                    contents[-1]["parts"].append(func_response_part)
+                else:
+                    contents.append({
+                        "role": "user",
+                        "parts": [func_response_part]
+                    })
 
         return system_instruction, contents
 

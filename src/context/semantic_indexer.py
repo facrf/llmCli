@@ -257,33 +257,29 @@ class SemanticIndexer:
 
 class SemanticSearchTool(BaseTool):
     """Ferramenta para a IA realizar busca semântica na base de código."""
+    name = "semantic_search"
+    description = "Busca funções, classes e trechos relevantes na base de código por significado semântico e palavras-chave."
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "Termo de busca, conceito técnico ou nome de função/classe a pesquisar"
+            },
+            "top_k": {
+                "type": "integer",
+                "description": "Número máximo de resultados a retornar (padrão: 5)"
+            }
+        },
+        "required": ["query"]
+    }
+
     def __init__(self, indexer: Optional[SemanticIndexer] = None) -> None:
         self.indexer = indexer or SemanticIndexer()
 
     @property
-    def name(self) -> str:
-        return "semantic_search"
-
-    @property
-    def description(self) -> str:
-        return "Busca funções, classes e trechos relevantes na base de código por significado semântico e palavras-chave."
-
-    @property
     def parameters(self) -> Dict[str, Any]:
-        return {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "Termo de busca, conceito técnico ou nome de função/classe a pesquisar"
-                },
-                "top_k": {
-                    "type": "integer",
-                    "description": "Número máximo de resultados a retornar (padrão: 5)"
-                }
-            },
-            "required": ["query"]
-        }
+        return self.parameters_schema
 
     async def execute(self, query: str, top_k: int = 5) -> ToolResult:
         results = self.indexer.search(query, top_k=top_k)

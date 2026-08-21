@@ -43,27 +43,33 @@ def test_gemini_message_conversion():
     messages = [
         ChatMessage(role="system", content="Você é um assistente."),
         ChatMessage(role="user", content="Olá mundo!"),
-        ChatMessage(role="assistant", content="Olá!")
+        ChatMessage(role="assistant", content="Olá!"),
+        ChatMessage(role="tool", content="out1", name="tool1"),
+        ChatMessage(role="tool", content="out2", name="tool2")
     ]
     sys_inst, contents = provider._convert_contents(messages)
     assert sys_inst is not None
     assert sys_inst["parts"][0]["text"] == "Você é um assistente."
-    assert len(contents) == 2
+    assert len(contents) == 3
     assert contents[0]["role"] == "user"
     assert contents[1]["role"] == "model"
+    assert contents[2]["role"] == "user"
+    assert len(contents[2]["parts"]) == 2
 
 
 def test_anthropic_message_conversion():
     provider = AnthropicProvider(model_name="claude-3-7-sonnet-20250219", api_key="dummy_key")
     messages = [
         ChatMessage(role="system", content="System instruction."),
-        ChatMessage(role="user", content="User prompt.")
+        ChatMessage(role="user", content="User prompt."),
+        ChatMessage(role="tool", content="Tool 1 out", tool_call_id="call_1"),
+        ChatMessage(role="tool", content="Tool 2 out", tool_call_id="call_2")
     ]
     sys_prompt, converted = provider._convert_messages(messages)
     assert sys_prompt == "System instruction."
     assert len(converted) == 1
     assert converted[0]["role"] == "user"
-    assert converted[0]["content"] == "User prompt."
+    assert len(converted[0]["content"]) == 3  # text + 2 tool_results
 
 
 def test_openai_tool_conversion():

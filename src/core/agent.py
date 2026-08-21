@@ -186,10 +186,11 @@ class Agent:
                 if ok:
                     await create_checkpoint_commit(f"patch em {block.file_path}")
 
-            # 2. Extrair e mesclar tool calls de blocos JSON no texto (modelos locais)
-            parsed_json_calls = extract_json_tool_calls(stream_text)
-            if parsed_json_calls:
-                collected_tool_calls.extend(parsed_json_calls)
+            # 2. Extrair e mesclar tool calls de blocos JSON no texto (modelos locais sem native tool calling)
+            if not collected_tool_calls:
+                parsed_json_calls = extract_json_tool_calls(stream_text)
+                if parsed_json_calls:
+                    collected_tool_calls.extend(parsed_json_calls)
 
             # 3. Executar tool calls se houver
             if collected_tool_calls:
@@ -338,9 +339,10 @@ class Agent:
                 if ok:
                     await create_checkpoint_commit(f"patch em {block.file_path}")
 
-            parsed_json_calls = extract_json_tool_calls(stream_text)
-            if parsed_json_calls:
-                collected_tool_calls.extend(parsed_json_calls)
+            if not collected_tool_calls:
+                parsed_json_calls = extract_json_tool_calls(stream_text)
+                if parsed_json_calls:
+                    collected_tool_calls.extend(parsed_json_calls)
 
             if collected_tool_calls:
                 self.session.add_assistant_message(stream_text, tool_calls=collected_tool_calls)

@@ -12,31 +12,26 @@ from src.tools.base import BaseTool, ToolResult
 
 class WebSearchTool(BaseTool):
     """Ferramenta de pesquisa na web via DuckDuckGo ou APIs de busca."""
-    
-    @property
-    def name(self) -> str:
-        return "web_search"
-
-    @property
-    def description(self) -> str:
-        return "Pesquisa informações atualizadas, documentações de APIs, bibliotecas e soluções de erros na Web."
+    name = "web_search"
+    description = "Pesquisa informações atualizadas, documentações de APIs, bibliotecas e soluções de erros na Web."
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "Termo de busca a ser pesquisado na internet"
+            },
+            "max_results": {
+                "type": "integer",
+                "description": "Número máximo de resultados (padrão: 5)"
+            }
+        },
+        "required": ["query"]
+    }
 
     @property
     def parameters(self) -> Dict[str, Any]:
-        return {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "Termo de busca a ser pesquisado na internet"
-                },
-                "max_results": {
-                    "type": "integer",
-                    "description": "Número máximo de resultados (padrão: 5)"
-                }
-            },
-            "required": ["query"]
-        }
+        return self.parameters_schema
 
     async def execute(self, query: str, max_results: int = 5) -> ToolResult:
         # Se tiver TAVILY_API_KEY configurada, usar Tavily
@@ -92,31 +87,26 @@ class WebSearchTool(BaseTool):
 
 class ReadUrlTool(BaseTool):
     """Ferramenta para extrair o conteúdo de páginas e documentações web."""
-
-    @property
-    def name(self) -> str:
-        return "read_url"
-
-    @property
-    def description(self) -> str:
-        return "Lê e extrai o conteúdo de texto legível a partir de uma URL da web (ex: documentações, artigos, repositórios)."
+    name = "read_url"
+    description = "Lê e extrai o conteúdo de texto legível a partir de uma URL da web (ex: documentações, artigos, repositórios)."
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "url": {
+                "type": "string",
+                "description": "URL HTTP ou HTTPS completa para leitura"
+            },
+            "max_chars": {
+                "type": "integer",
+                "description": "Limite máximo de caracteres a extrair (padrão: 6000)"
+            }
+        },
+        "required": ["url"]
+    }
 
     @property
     def parameters(self) -> Dict[str, Any]:
-        return {
-            "type": "object",
-            "properties": {
-                "url": {
-                    "type": "string",
-                    "description": "URL HTTP ou HTTPS completa para leitura"
-                },
-                "max_chars": {
-                    "type": "integer",
-                    "description": "Limite máximo de caracteres a extrair (padrão: 6000)"
-                }
-            },
-            "required": ["url"]
-        }
+        return self.parameters_schema
 
     async def execute(self, url: str, max_chars: int = 6000) -> ToolResult:
         try:

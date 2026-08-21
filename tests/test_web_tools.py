@@ -17,3 +17,16 @@ async def test_web_search_tool_structure():
     tool = WebSearchTool()
     assert tool.name == "web_search"
     assert "query" in tool.parameters["properties"]
+    definition = tool.get_definition()
+    assert definition.name == "web_search"
+    assert "query" in definition.parameters["properties"]
+
+
+@pytest.mark.asyncio
+async def test_read_url_tool_structure():
+    tool = ReadUrlTool()
+    assert tool.name == "read_url"
+    assert "url" in tool.parameters["properties"]
+    definition = tool.get_definition()
+    assert definition.name == "read_url"
+    assert "url" in definition.parameters["properties"]

@@ -46,11 +46,16 @@ class BaseTool:
     description: str = ""
     parameters_schema: Dict[str, Any] = {}
 
+    @property
+    def parameters(self) -> Dict[str, Any]:
+        return self.parameters_schema
+
     def get_definition(self) -> ToolDefinition:
+        params = self.parameters if hasattr(self, "parameters") and self.parameters else self.parameters_schema
         return ToolDefinition(
             name=self.name,
             description=self.description,
-            parameters=self.parameters_schema
+            parameters=params
         )
 
     async def execute(self, **kwargs: Any) -> ToolResult:

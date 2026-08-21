@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime
+import html
 from pathlib import Path
 from typing import Optional
 
@@ -62,12 +63,7 @@ class SessionExporter:
         messages_html = []
         for msg in self.session.messages:
             role = msg.role.lower()
-            escaped = (
-                msg.content.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\n", "<br>")
-            )
+            escaped = html.escape(msg.content or "").replace("\n", "<br>")
             if role == "user":
                 badge = '<span class="badge user">👤 Usuário</span>'
                 cls = "msg-user"
