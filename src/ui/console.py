@@ -9,20 +9,18 @@ from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
+from src.i18n import t
 
 console = Console()
 
 
 def print_banner(active_model: str, yolo_mode: bool) -> None:
     yolo_badge = "[bold red]⚡ YOLO: ON[/bold red]" if yolo_mode else "[bold green]🛡️ YOLO: OFF[/bold green]"
-    title = f"[bold cyan]llmCli[/bold cyan] - Assistente IA de Código Híbrido (Local & Nuvem)"
+    title = f"[bold cyan]{t('banner_subtitle')}[/bold cyan]"
     subtitle = f"Modelo Ativo: [bold yellow]{active_model}[/bold yellow] | Modo: {yolo_badge}"
+    desc = t("banner_desc")
     
-    body = (
-        f"{title}\n{subtitle}\n\n"
-        "[dim]Suporte nativo a llama.cpp (porta 8080), Ollama, LM Studio, vLLM, Gemini, OpenAI, Anthropic e DeepSeek.[/dim]\n"
-        "[dim]Digite [bold]/help[/bold] para ver comandos ou [bold]/yolo[/bold] para alternar o modo autônomo.[/dim]"
-    )
+    body = f"{title}\n{subtitle}\n\n[dim]{desc}[/dim]"
     console.print(Panel(body, border_style="cyan", padding=(1, 2)))
 
 

@@ -12,6 +12,8 @@ SLASH_COMMANDS = [
     ("/yolo", "Alterna o modo YOLO (execução autônoma total sem pedir confirmação)"),
     ("/architect", "Alterna Modo Arquiteto (modelo forte para planejar + modelo rápido para editar)"),
     ("/arch", "Atalho para o comando /architect"),
+    ("/lang", "Exibe ou altera o idioma do sistema (pt, en, es, de, fr, zh, ru, hi, auto)"),
+    ("/language", "Atalho para o comando /lang"),
     ("/model", "Troca o modelo de LLM ativo (ex: /model llamacpp/default, /model gemini/gemini-2.5-flash)"),
     ("/models", "Lista todos os provedores e modelos locais/nuvem disponíveis"),
     ("/scan", "Escaneia um IP/host e detecta automaticamente todos os modelos e servidores de LLM ativos (ex: /scan 192.168.0.11)"),
@@ -122,6 +124,25 @@ class CliCompleter(Completer):
                 for m in model_suggestions:
                     if m.startswith(model_arg):
                         yield Completion(m, start_position=-len(model_arg), display=m, display_meta="Modelo")
+                return
+
+            # Sugestão de idiomas para /lang e /language
+            if cmd_part in ("/lang", "/language"):
+                lang_arg = parts[1]
+                lang_suggestions = [
+                    ("pt-BR", "Português (Brasil) 🇧🇷"),
+                    ("en-US", "English (US) 🇺🇸"),
+                    ("es-ES", "Español 🇪🇸"),
+                    ("de-DE", "Deutsch 🇩🇪"),
+                    ("fr-FR", "Français 🇫🇷"),
+                    ("zh-CN", "简体中文 🇨🇳"),
+                    ("ru-RU", "Русский 🇷🇺"),
+                    ("hi-IN", "हिन्दी (Hindi) 🇮🇳"),
+                    ("auto", "Detecção automática 🌐")
+                ]
+                for code, desc in lang_suggestions:
+                    if code.lower().startswith(lang_arg.lower()) or desc.lower().startswith(lang_arg.lower()):
+                        yield Completion(code, start_position=-len(lang_arg), display=code, display_meta=desc)
                 return
 
     def _complete_files(self, prefix: str, root_dir: Path) -> Iterable[Completion]:

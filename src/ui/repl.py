@@ -10,6 +10,7 @@ from prompt_toolkit.history import FileHistory, InMemoryHistory
 from prompt_toolkit.styles import Style
 from src.config import get_config, get_preferences
 from src.core.agent import Agent
+from src.i18n import SUPPORTED_LANGUAGES, get_active_language, set_active_language, t
 from src.providers.registry import ProviderRegistry
 from src.providers.scanner import HostScanner
 from src.tools.git_ops import create_user_commit, get_git_diff, get_raw_git_diff, undo_last_checkpoint
@@ -118,6 +119,25 @@ class ReplSession:
                 prefs.set_global_pref("architect_mode", True)
                 prefs.set_global_pref("architect_model", arg)
                 console.print(f"[bold magenta]🏛️ MODO ARQUITETO ATIVADO:[/bold magenta] Arquiteto: [bold yellow]{arg}[/bold yellow] | Editor: [bold cyan]{self.config.active_model}[/bold cyan]")
+
+        elif command in ("/lang", "/language"):
+            prefs = get_preferences()
+            if not arg:
+                current_code = get_active_language()
+                info = SUPPORTED_LANGUAGES.get(current_code, {"name": current_code, "flag": "🌐"})
+                console.print(f"[bold cyan]{t('lang_current', flag=info['flag'], name=info['name'], code=current_code)}[/bold cyan]")
+                console.print("\n[dim]Idiomas suportados / Supported languages:[/dim]")
+                for code, item in SUPPORTED_LANGUAGES.items():
+                    current_marker = " [bold green]✓[/bold green]" if code == current_code else ""
+                    console.print(f"  {item['flag']} [bold yellow]{code}[/bold yellow] - {item['name']}{current_marker}")
+                console.print("  🌐 [bold yellow]auto[/bold yellow] - Detecção automática (SO / OS locale)")
+                console.print("\n[dim]Use '/lang <código>' (ex: /lang en, /lang pt, /lang es, /lang de, /lang fr, /lang zh, /lang ru, /lang hi, /lang auto)[/dim]")
+            else:
+                resolved = set_active_language(arg)
+                prefs.set_global_pref("language", resolved)
+                self.config.language = resolved
+                info = SUPPORTED_LANGUAGES.get(resolved, {"name": resolved, "flag": "🌐"})
+                console.print(f"[bold green]{t('lang_changed', flag=info['flag'], name=info['name'], code=resolved)}[/bold green]")
 
         elif command == "/model":
             if not arg:
@@ -370,6 +390,7 @@ class ReplSession:
 [bold cyan]Comandos Disponíveis no llmCli:[/bold cyan]
   [bold yellow]/yolo[/bold yellow]             - Alterna o modo YOLO (salva preferência por LLM e global)
   [bold yellow]/architect [mod][/bold yellow]  - Alterna Modo Arquiteto (planejador forte + editor rápido)
+  [bold yellow]/lang [código][/bold yellow]    - Altera o idioma do sistema (pt, en, es, de, fr, zh, ru, hi, auto)
   [bold yellow]/scan <ip/host>[/bold yellow]   - Escaneia o IP e detecta automaticamente servidores e modelos ativos
   [bold yellow]/host <ip/host>[/bold yellow]   - Conecta ao host e define como servidor local ativo (ex: /host 192.168.0.11)
   [bold yellow]/model <nome>[/bold yellow]     - Troca o modelo de LLM (carrega preferências salvas daquele modelo)

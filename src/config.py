@@ -37,6 +37,7 @@ class Config(BaseModel):
     active_model: str = ""
     architect_mode: bool = False
     architect_model: str = Field(default_factory=lambda: os.getenv("ARCHITECT_MODEL", "gemini/gemini-2.5-pro"))
+    language: str = Field(default_factory=lambda: os.getenv("LLMCLI_LANG", "pt-BR"))
     yolo_mode: bool = Field(default_factory=lambda: os.getenv("YOLO_MODE", "false").lower() in ("true", "1", "yes"))
     temperature: float = 0.2
     max_tokens: int = 4096
@@ -183,12 +184,23 @@ class UserPreferences:
         if arch_model:
             config.architect_model = str(arch_model)
 
+        lang_val = self.get_global_pref("language", None)
+        if lang_val:
+            config.language = str(lang_val)
+            try:
+                from src.i18n import set_active_language
+                set_active_language(lang_val)
+            except Exception:
+                pass
+
     def reset(self) -> None:
         """Redefine todas as preferências de usuário e remove o arquivo de persistência."""
         self.data = {"global": {}, "models": {}}
         try:
             if self.prefs_path.exists():
                 self.prefs_path.unlink()
+            from src.i18n import set_active_language
+            set_active_language("pt-BR")
         except Exception:
             pass
 

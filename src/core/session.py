@@ -5,6 +5,7 @@ from typing import List, Optional
 from src.config import get_config
 from src.context.file_tracker import FileTracker
 from src.context.repomap import build_repo_map
+from src.i18n import t
 from src.providers.base import ChatMessage
 
 
@@ -68,6 +69,10 @@ class Session:
             repo_map=repo_map,
             files_context=files_context
         )
+        lang_instruction = t("prompt_ai_instruction")
+        if lang_instruction:
+            prompt_text += f"\n=== IDIOMA E COMUNICAÇÃO ===\n{lang_instruction}\n"
+
         return ChatMessage(role="system", content=prompt_text)
 
     def compact_history(self, summary_text: str, keep_last_n: int = 2) -> None:
