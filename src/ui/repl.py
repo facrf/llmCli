@@ -459,8 +459,13 @@ class ReplSession:
             target_path = None
             if arg:
                 parts_exp = arg.split(maxsplit=1)
-                if parts_exp[0].lower() in ("html", "htm"):
+                first_token = parts_exp[0].lower()
+                if first_token in ("html", "htm"):
                     fmt = "html"
+                    if len(parts_exp) > 1:
+                        target_path = Path(parts_exp[1])
+                elif first_token in ("md", "markdown"):
+                    fmt = "md"
                     if len(parts_exp) > 1:
                         target_path = Path(parts_exp[1])
                 else:
