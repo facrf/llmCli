@@ -1,0 +1,36 @@
+# llmCli - Arquivo de Configuração Principal
+
+# Modelo padrão caso nenhum seja especificado via CLI ou comando /model
+# Exemplos:
+#   - llamacpp/default (ou llamacpp/qwen2.5-coder-7b)
+#   - ollama/qwen2.5-coder:7b
+#   - gemini/gemini-2.5-flash
+#   - openai/gpt-4o
+#   - anthropic/claude-3-7-sonnet
+#   - deepseek/deepseek-chat
+#   - groq/llama-3.3-70b-versatile
+default_model: "gemini/gemini-2.5-flash"
+
+# Modo YOLO (execução autônoma de ferramentas e comandos sem pedir confirmação)
+yolo_mode: false
+
+# Parâmetros de Geração
+temperature: 0.2
+max_tokens: 4096
+
+# Endpoints Locais
+local_endpoints:
+  llamacpp: "http://localhost:8080"
+  ollama: "http://localhost:11434"
+  lmstudio: "http://localhost:1234/v1"
+  vllm: "http://localhost:8000/v1"
+
+# Integração Git
+git:
+  auto_commit_on_edit: true
+  commit_prefix: "llmCli:"
+
+# Limites de Contexto e Segurança
+security:
+  workspace_only: true
+  command_timeout_seconds: 60
