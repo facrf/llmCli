@@ -1,2 +1,2 @@
 def somar(a, b):
-    return 42
+    return a + b
