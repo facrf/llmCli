@@ -5,7 +5,8 @@ import asyncio
 from typing import Any, Callable, Dict, List, Optional
 from rich.console import Console
 from src.config import get_config
-from src.core.diff_applier import apply_search_replace_block, extract_search_replace_blocks
+from src.core.diff_applier import apply_search_replace_block, extract_search_replace_blocks, extract_json_tool_calls
+
 from src.core.session import Session
 from src.providers.base import LLMProvider, StreamChunk
 from src.providers.registry import ProviderRegistry
@@ -144,9 +145,15 @@ class Agent:
                 if ok:
                     await create_checkpoint_commit(f"patch em {block.file_path}")
 
-            # 2. Executar tool calls via function calling se houver
+            # 2. Extrair e mesclar tool calls de blocos JSON no texto (modelos locais)
+            parsed_json_calls = extract_json_tool_calls(stream_text)
+            if parsed_json_calls:
+                collected_tool_calls.extend(parsed_json_calls)
+
+            # 3. Executar tool calls se houver
             if collected_tool_calls:
                 self.session.add_assistant_message(stream_text, tool_calls=collected_tool_calls)
+
 
                 for tc in collected_tool_calls:
                     res = await self.execute_tool_with_permission(

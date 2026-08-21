@@ -1,7 +1,8 @@
-"""Search & Replace block parser and diff applier (Aider-style & AST-safe)."""
+"""Search & Replace block parser, JSON tool calls extractor, and diff applier."""
 from __future__ import annotations
 
 import difflib
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -32,7 +33,6 @@ def extract_search_replace_blocks(text: str, default_filepath: Optional[str] = N
     """Extrai blocos SEARCH/REPLACE do texto da resposta da LLM."""
     blocks: List[SearchReplaceBlock] = []
 
-    # Procurar primeiro cabeçalhos explícitos de arquivo antes dos blocos
     file_header_pattern = re.compile(r"^(?:(?:[#*`\s]*)(?:File|Arquivo|Path):\s*`?([^\n`\r]+)`?|([a-zA-Z0-9_\-/\\]+\.[a-zA-Z0-9]+))\s*$", re.MULTILINE)
 
     for match in SEARCH_REPLACE_PATTERN.finditer(text):
@@ -42,7 +42,6 @@ def extract_search_replace_blocks(text: str, default_filepath: Optional[str] = N
 
         target_file = header_path or default_filepath
         if not target_file:
-            # Tentar encontrar menção de arquivo logo antes do bloco
             start_pos = match.start()
             preceding_text = text[max(0, start_pos - 200):start_pos]
             headers = list(file_header_pattern.finditer(preceding_text))
@@ -61,13 +60,59 @@ def extract_search_replace_blocks(text: str, default_filepath: Optional[str] = N
     return blocks
 
 
+def extract_json_tool_calls(text: str) -> List[Any]:
+    """Extrai chamadas de ferramentas em blocos JSON markdown ou linhas JSON soltas geradas por modelos locais."""
+    from src.tools.base import ToolCall
+    calls: List[ToolCall] = []
+
+    # 1. Procurar em blocos de código ```json ... ```
+    json_block_pattern = re.compile(r"```(?:json)?\s*([\s\S]*?)\s*```", re.IGNORECASE)
+    for m in json_block_pattern.finditer(text):
+        content = m.group(1).strip()
+        for line in content.splitlines():
+            line = line.strip()
+            if line.startswith("{") and line.endswith("}"):
+                try:
+                    data = json.loads(line)
+                    name = data.get("name") or data.get("tool") or data.get("action")
+                    args = data.get("arguments") or data.get("args") or data.get("parameters") or {}
+                    if name and isinstance(args, dict):
+                        calls.append(ToolCall(id=f"json_call_{len(calls)}", name=name, arguments=args))
+                except Exception:
+                    pass
+        if not calls:
+            try:
+                data = json.loads(content)
+                name = data.get("name") or data.get("tool") or data.get("action")
+                args = data.get("arguments") or data.get("args") or data.get("parameters") or {}
+                if name and isinstance(args, dict):
+                    calls.append(ToolCall(id=f"json_call_{len(calls)}", name=name, arguments=args))
+            except Exception:
+                pass
+
+    # 2. Procurar linhas JSON soltas no texto fora ou dentro de blocos
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith("{") and line.endswith("}") and ('"name"' in line or '"tool"' in line or '"action"' in line):
+            try:
+                data = json.loads(line)
+                name = data.get("name") or data.get("tool") or data.get("action")
+                args = data.get("arguments") or data.get("args") or data.get("parameters") or {}
+                if name and isinstance(args, dict):
+                    if not any(c.name == name and c.arguments == args for c in calls):
+                        calls.append(ToolCall(id=f"json_call_{len(calls)}", name=name, arguments=args))
+            except Exception:
+                pass
+
+    return calls
+
+
+
 def fuzzy_find_and_replace(original_text: str, search: str, replace: str) -> Tuple[bool, str]:
     """Tenta substituir o trecho exato ou com correspondência tolerante a espaços/quebras de linha."""
-    # 1. Correspondência exata
     if search in original_text:
         return True, original_text.replace(search, replace, 1)
 
-    # 2. Correspondência sem espaços no fim das linhas
     def strip_trailing_lines(t: str) -> str:
         return "\n".join(l.rstrip() for l in t.splitlines())
 
@@ -75,7 +120,6 @@ def fuzzy_find_and_replace(original_text: str, search: str, replace: str) -> Tup
     stripped_search = strip_trailing_lines(search)
 
     if stripped_search in stripped_orig:
-        # Reconstruir linhas
         orig_lines = original_text.splitlines(keepends=True)
         search_lines = [l.rstrip() for l in search.splitlines()]
         search_len = len(search_lines)
@@ -87,7 +131,6 @@ def fuzzy_find_and_replace(original_text: str, search: str, replace: str) -> Tup
                 after = "".join(orig_lines[i + search_len:])
                 return True, before + replace + after
 
-    # 3. Correspondência de similaridade difflib se o bloco for único
     orig_lines = original_text.splitlines()
     search_lines = search.splitlines()
     if not search_lines or len(orig_lines) < len(search_lines):
@@ -116,7 +159,7 @@ def fuzzy_find_and_replace(original_text: str, search: str, replace: str) -> Tup
 
 
 def apply_search_replace_block(block: SearchReplaceBlock) -> Tuple[bool, str, str]:
-    """Aplica o bloco de modificação ao arquivo alvo. Retorna (sucesso, mensagem, unified_diff)."""
+    """Aplica o bloco de modificação ao arquivo alvo."""
     config = get_config()
     target_path = (config.project_root / block.file_path).resolve()
 
@@ -124,7 +167,6 @@ def apply_search_replace_block(block: SearchReplaceBlock) -> Tuple[bool, str, st
         return False, f"Caminho inseguro fora do workspace: {block.file_path}", ""
 
     if not target_path.exists():
-        # Se for um arquivo novo e o SEARCH estiver vazio, cria o arquivo
         if not block.search_content.strip():
             target_path.parent.mkdir(parents=True, exist_ok=True)
             with open(target_path, "w", encoding="utf-8") as f:
@@ -140,7 +182,6 @@ def apply_search_replace_block(block: SearchReplaceBlock) -> Tuple[bool, str, st
     if not success:
         return False, f"Não foi possível localizar o trecho SEARCH no arquivo '{block.file_path}'.", ""
 
-    # Gerar diff unificado para exibição limpa
     diff_lines = list(difflib.unified_diff(
         original_content.splitlines(keepends=True),
         updated_content.splitlines(keepends=True),
@@ -149,7 +190,6 @@ def apply_search_replace_block(block: SearchReplaceBlock) -> Tuple[bool, str, st
     ))
     diff_str = "".join(diff_lines)
 
-    # Gravar arquivo atualizado
     with open(target_path, "w", encoding="utf-8") as f:
         f.write(updated_content)
 
