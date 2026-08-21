@@ -80,16 +80,17 @@ class Config(BaseModel):
 
         cfg = cls(**data)
 
-        # Aplicar preferências persistentes do usuário se disponíveis
-        try:
-            prefs = get_preferences()
-            last_model = prefs.get_global_pref("last_active_model")
-            if last_model and "DEFAULT_MODEL" not in os.environ:
-                cfg.active_model = last_model
-            # Aplicar preferências para o modelo ativo
-            prefs.apply_model_preferences(cfg.active_model, cfg)
-        except Exception:
-            pass
+        # Aplicar preferências persistentes do usuário se disponíveis (fora do ambiente de teste)
+        if "PYTEST_CURRENT_TEST" not in os.environ:
+            try:
+                prefs = get_preferences()
+                last_model = prefs.get_global_pref("last_active_model")
+                if last_model and "DEFAULT_MODEL" not in os.environ:
+                    cfg.active_model = last_model
+                # Aplicar preferências para o modelo ativo
+                prefs.apply_model_preferences(cfg.active_model, cfg)
+            except Exception:
+                pass
 
         return cfg
 

@@ -18,10 +18,11 @@ from src.ui.console import ask_user_confirmation, console, print_diff, print_too
 
 
 class Agent:
-    def __init__(self, session: Optional[Session] = None) -> None:
+    def __init__(self, session: Optional[Session] = None, architect_provider: Optional[LLMProvider] = None) -> None:
         self.config = get_config()
         self.session = session or Session()
         self.provider: LLMProvider = ProviderRegistry.create_provider()
+        self.architect_provider: Optional[LLMProvider] = architect_provider
         
         # Registrar ferramentas disponíveis
         self.tools: Dict[str, BaseTool] = {
@@ -75,6 +76,8 @@ class Agent:
         return result
 
     def get_architect_provider(self) -> LLMProvider:
+        if self.architect_provider is not None:
+            return self.architect_provider
         arch_model = self.config.architect_model or "gemini/gemini-2.5-pro"
         return ProviderRegistry.create_provider(arch_model)
 
