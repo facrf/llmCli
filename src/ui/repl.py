@@ -8,7 +8,7 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.history import FileHistory, InMemoryHistory
 from prompt_toolkit.styles import Style
-from src.config import get_config
+from src.config import get_config, get_preferences
 from src.core.agent import Agent
 from src.providers.registry import ProviderRegistry
 from src.providers.scanner import HostScanner
@@ -85,18 +85,22 @@ class ReplSession:
 
         elif command == "/yolo":
             self.config.yolo_mode = not self.config.yolo_mode
+            prefs = get_preferences()
+            prefs.set_model_pref(self.config.active_model, "yolo_mode", self.config.yolo_mode)
+            prefs.set_global_pref("yolo_mode", self.config.yolo_mode)
             if self.config.yolo_mode:
-                console.print("[bold red]⚡ MODO YOLO ATIVADO: Execuções automáticas de comandos e edições sem confirmação![/bold red]")
+                console.print(f"[bold red]⚡ MODO YOLO ATIVADO para [yellow]{self.config.active_model}[/yellow] (preferência salva)![/bold red]")
             else:
-                console.print("[bold green]🛡️ MODO YOLO DESATIVADO: Confirmação manual exigida para ações destrutivas.[/bold green]")
+                console.print(f"[bold green]🛡️ MODO YOLO DESATIVADO para [yellow]{self.config.active_model}[/yellow] (preferência salva).[/bold green]")
 
         elif command == "/model":
             if not arg:
-                console.print(f"Modelo atual: [bold yellow]{self.config.active_model}[/bold yellow]")
-                console.print("[dim]Use '/model <nome>' para alterar (ex: /model llamacpp/default, /model gemini/gemini-2.5-flash)[/dim]")
+                console.print(f"Modelo atual: [bold yellow]{self.config.active_model}[/bold yellow] (Temp: {self.config.temperature})")
+                console.print("[dim]Use '/model <nome>' para alterar (ex: /model llamacpp/default, /model gemini/gemini-2.5-flash, /model gpt/codex)[/dim]")
             else:
                 self.agent.set_model(arg)
-                console.print(f"[bold green]✓ Modelo ativo alterado para:[/bold green] [bold yellow]{arg}[/bold yellow]")
+                yolo_desc = "[bold red]⚡ YOLO: ON[/bold red]" if self.config.yolo_mode else "[bold green]🛡️ YOLO: OFF[/bold green]"
+                console.print(f"[bold green]✓ Modelo ativo alterado para:[/bold green] [bold yellow]{arg}[/bold yellow] [dim]({yolo_desc} | Temp: {self.config.temperature})[/dim]")
 
         elif command == "/models":
             console.print("[dim]Verificando status de conectividade dos provedores...[/dim]")
@@ -246,9 +250,22 @@ class ReplSession:
             console.print("[green]Histórico da conversa limpo com sucesso.[/green]")
 
         elif command == "/reset":
-            self.agent.session.clear_history()
-            self.agent.session.file_tracker.clear()
-            console.print("[green]Sessão reiniciada (histórico e arquivos de contexto limpos).[/green]")
+            if arg.lower() in ("prefs", "preferences", "config"):
+                get_preferences().reset()
+                self.config.yolo_mode = False
+                self.config.temperature = 0.2
+                console.print("[bold green]✓ Todas as preferências salvas (globais e por LLM) foram redefinidas para o padrão.[/bold green]")
+            elif arg.lower() == "all":
+                self.agent.session.clear_history()
+                self.agent.session.file_tracker.clear()
+                get_preferences().reset()
+                self.config.yolo_mode = False
+                self.config.temperature = 0.2
+                console.print("[bold green]✓ Sessão e preferências de usuário totalmente reiniciadas para o padrão.[/bold green]")
+            else:
+                self.agent.session.clear_history()
+                self.agent.session.file_tracker.clear()
+                console.print("[green]Sessão reiniciada (histórico e arquivos limpos).[/green] [dim](Use '/reset prefs' para redefinir preferências salvas do usuário)[/dim]")
 
         elif command == "/compact":
             if not self.agent.session.messages:
@@ -267,7 +284,7 @@ class ReplSession:
 
         elif command in ("/temp", "/temperature"):
             if not arg:
-                console.print(f"Temperatura atual: [bold yellow]{self.config.temperature}[/bold yellow] (padrão: 0.2)")
+                console.print(f"Temperatura atual para [yellow]{self.config.active_model}[/yellow]: [bold yellow]{self.config.temperature}[/bold yellow] (padrão: 0.2)")
                 console.print("[dim]Use '/temp <valor>' (ex: /temp 0.0 para determinístico, /temp 0.7 para criativo)[/dim]")
             else:
                 try:
@@ -276,7 +293,10 @@ class ReplSession:
                         console.print("[red]Temperatura deve estar entre 0.0 e 2.0.[/red]")
                     else:
                         self.config.temperature = val
-                        console.print(f"[bold green]✓ Temperatura alterada para:[/bold green] [bold yellow]{val}[/bold yellow]")
+                        prefs = get_preferences()
+                        prefs.set_model_pref(self.config.active_model, "temperature", val)
+                        prefs.set_global_pref("temperature", val)
+                        console.print(f"[bold green]✓ Temperatura para [yellow]{self.config.active_model}[/yellow] alterada para:[/bold green] [bold yellow]{val}[/bold yellow] (preferência salva)")
                 except ValueError:
                     console.print("[red]Valor de temperatura inválido. Use um número float (ex: /temp 0.2).[/red]")
 
@@ -322,10 +342,10 @@ class ReplSession:
     def _print_help(self) -> None:
         console.print("""
 [bold cyan]Comandos Disponíveis no llmCli:[/bold cyan]
-  [bold yellow]/yolo[/bold yellow]             - Alterna o modo YOLO (execução autônoma total sem pedir confirmação)
+  [bold yellow]/yolo[/bold yellow]             - Alterna o modo YOLO (salva preferência por LLM e global)
   [bold yellow]/scan <ip/host>[/bold yellow]   - Escaneia o IP e detecta automaticamente servidores e modelos ativos
   [bold yellow]/host <ip/host>[/bold yellow]   - Conecta ao host e define como servidor local ativo (ex: /host 192.168.0.11)
-  [bold yellow]/model <nome>[/bold yellow]     - Troca o modelo de LLM (ex: /model llamacpp/default, /model gemini/gemini-2.5-flash)
+  [bold yellow]/model <nome>[/bold yellow]     - Troca o modelo de LLM (carrega preferências salvas daquele modelo)
   [bold yellow]/models[/bold yellow]           - Exibe lista e status de todos os provedores locais e na nuvem
 
   [bold yellow]/add <caminho>[/bold yellow]    - Adiciona arquivo ou diretório ao contexto da IA
@@ -340,10 +360,10 @@ class ReplSession:
 
   [bold yellow]/paste[/bold yellow]            - Inicia modo multilinha para colar blocos de código
   [bold yellow]/compact[/bold yellow]          - Compacta o histórico da conversa gerando resumo consolidado
-  [bold yellow]/temp [valor][/bold yellow]     - Exibe ou altera a temperatura do modelo (ex: /temp 0.2)
+  [bold yellow]/temp [valor][/bold yellow]     - Exibe ou altera a temperatura (salva por LLM e global)
   [bold yellow]/system [txt][/bold yellow]     - Exibe, altera ou redefine o system prompt (ex: /system reset)
   [bold yellow]/clear[/bold yellow]            - Limpa o histórico de mensagens da conversa
-  [bold yellow]/reset[/bold yellow]            - Limpa o histórico e esvazia o contexto de arquivos
+  [bold yellow]/reset [prefs|all][/bold yellow] - Limpa sessão ou redefine preferências salvas do usuário
   [bold yellow]/tokens[/bold yellow]           - Exibe estimativa de tokens do contexto
   [bold yellow]/help[/bold yellow]             - Mostra este menu de ajuda
   [bold yellow]/exit, /quit[/bold yellow]      - Sai do programa

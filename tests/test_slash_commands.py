@@ -155,3 +155,25 @@ async def test_slash_compact_and_review():
     assert await repl.handle_slash_command("/test tests/test_soma.py") is True
 
 
+@pytest.mark.asyncio
+async def test_slash_reset_options():
+    agent = Agent()
+    repl = ReplSession(agent=agent)
+
+    # Configurar preferências
+    await repl.handle_slash_command("/yolo")
+    await repl.handle_slash_command("/temp 0.8")
+
+    # /reset simples
+    assert await repl.handle_slash_command("/reset") is True
+
+    # /reset prefs
+    assert await repl.handle_slash_command("/reset prefs") is True
+    assert agent.config.yolo_mode is False
+    assert agent.config.temperature == 0.2
+
+    # /reset all
+    assert await repl.handle_slash_command("/reset all") is True
+
+
+

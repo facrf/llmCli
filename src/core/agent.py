@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any, Callable, Dict, List, Optional
 from rich.console import Console
-from src.config import get_config
+from src.config import get_config, get_preferences
 from src.core.diff_applier import apply_search_replace_block, extract_search_replace_blocks, extract_json_tool_calls
 
 from src.core.session import Session
@@ -36,6 +36,8 @@ class Agent:
     def set_model(self, model_name: str) -> None:
         self.config.active_model = model_name
         self.provider = ProviderRegistry.create_provider(model_name)
+        # Aplicar preferências persistentes salvas para este modelo
+        get_preferences().apply_model_preferences(model_name, self.config)
 
     def get_tool_definitions(self) -> List[ToolDefinition]:
         return [tool.get_definition() for tool in self.tools.values()]
