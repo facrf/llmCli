@@ -11,7 +11,7 @@ from src.core.agent import Agent
 from src.providers.registry import ProviderRegistry
 from src.providers.scanner import HostScanner
 from src.tools.git_ops import get_git_diff, undo_last_checkpoint
-from src.ui.completer import CliCompleter
+from src.ui.completer import CliCompleter, resolve_slash_command
 from src.ui.console import console, print_banner, print_diff, print_scan_results, print_status_table
 
 
@@ -32,7 +32,8 @@ class ReplSession:
         self.prompt_session: PromptSession = PromptSession(
             history=InMemoryHistory(),
             completer=CliCompleter(),
-            style=prompt_style
+            style=prompt_style,
+            complete_while_typing=True
         )
 
     def _get_prompt_html(self) -> HTML:
@@ -55,8 +56,18 @@ class ReplSession:
     async def handle_slash_command(self, cmd_line: str) -> bool:
         """Processa comandos iniciados com '/'. Retorna True para continuar o loop ou False para sair."""
         parts = cmd_line.strip().split(maxsplit=1)
-        command = parts[0].lower()
+        raw_command = parts[0].lower()
         arg = parts[1].strip() if len(parts) > 1 else ""
+
+        # Resolver comando (autocompletar caso o comando seja parcial e unico)
+        command, matches = resolve_slash_command(raw_command, has_arg=bool(arg))
+
+        if not command:
+            if matches:
+                console.print(f"[yellow]Comando ambíguo '{raw_command}'. Opções possíveis: {', '.join(matches)}[/yellow]")
+            else:
+                console.print(f"[red]Comando desconhecido: '{raw_command}'. Digite /help para ver os comandos disponíveis.[/red]")
+            return True
 
         if command in ("/exit", "/quit", "/q"):
             console.print("[cyan]Encerrando llmCli. Até logo![/cyan]")

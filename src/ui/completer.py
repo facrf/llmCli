@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
 from src.config import get_config
@@ -14,8 +14,8 @@ SLASH_COMMANDS = [
     ("/models", "Lista todos os provedores e modelos locais/nuvem disponíveis"),
     ("/scan", "Escaneia um IP/host e detecta automaticamente todos os modelos e servidores de LLM ativos (ex: /scan 192.168.0.11)"),
     ("/host", "Conecta e define o IP/host padrão para Ollama e llama.cpp (ex: /host 192.168.0.11)"),
+    ("/discover", "Escaneia e autodetecta modelos e servidores de LLM ativos no host"),
     ("/add", "Adiciona arquivo(s) ao contexto ativo da IA (ex: /add src/main.py)"),
-
     ("/drop", "Remove arquivo(s) do contexto da IA"),
     ("/files", "Lista arquivos atualmente carregados no contexto"),
     ("/diff", "Exibe as alterações git atuais não commitadas"),
@@ -26,8 +26,42 @@ SLASH_COMMANDS = [
     ("/tokens", "Exibe estimativa de tokens do contexto atual"),
     ("/help", "Exibe o menu de ajuda e documentação"),
     ("/exit", "Encerra o llmCli"),
-    ("/quit", "Encerra o llmCli")
+    ("/quit", "Encerra o llmCli"),
+    ("/q", "Encerra o llmCli")
 ]
+
+KNOWN_SLASH_COMMANDS = [cmd for cmd, _ in SLASH_COMMANDS]
+
+
+def resolve_slash_command(command: str, has_arg: bool = False) -> tuple[Optional[str], List[str]]:
+    """Resolve um comando slash parcial ou exato para seu comando canônico.
+    
+    Retorna uma tupla (resolved_command, candidate_matches):
+    - Se encontrar correspondência exata ou única correspondência por prefixo, retorna (resolved_command, []).
+    - Se for ambíguo (múltiplas opções), retorna (None, candidate_matches).
+    - Se for desconhecido (nenhuma opção), retorna (None, []).
+    """
+    cmd_clean = command.strip().lower()
+    if not cmd_clean.startswith("/"):
+        return None, []
+
+    # 1. Correspondência Exata
+    if cmd_clean in KNOWN_SLASH_COMMANDS:
+        return cmd_clean, []
+
+    # 2. Busca por prefixo
+    matches = [c for c in KNOWN_SLASH_COMMANDS if c.startswith(cmd_clean)]
+    
+    # Se houver apenas 1 comando correspondente, completa automaticamente
+    if len(matches) == 1:
+        return matches[0], []
+
+    # Caso especial: se o usuário passou argumento e as opções forem /model e /models,
+    # /model é o único que aceita argumentos
+    if has_arg and set(matches) == {"/model", "/models"}:
+        return "/model", []
+
+    return None, matches
 
 
 class CliCompleter(Completer):
