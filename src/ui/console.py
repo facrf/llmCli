@@ -15,25 +15,15 @@ console = Console()
 
 def print_banner(active_model: str, yolo_mode: bool) -> None:
     yolo_badge = "[bold red]⚡ YOLO: ON[/bold red]" if yolo_mode else "[bold green]🛡️ YOLO: OFF[/bold green]"
-    
-    title_art = (
-        "🇧🇷 [bold bright_green]█░░ █░░ █▀▄▀█ █▀▀ █░░ ▀█ ▄▄ █▄▄ █▀█[/bold bright_green]\n"
-        "   [bold bright_green]█▄▄ █▄▄ █░▀░█ █▄▄ █▄▄ ░█ ░░ █▄█ █▀▄[/bold bright_green]"
-    )
-    
-    sep = "[dim]───────────────────────────────────────────────────────────────────[/dim]"
+    title = f"[bold cyan]llmCli[/bold cyan] - Assistente IA de Código Híbrido (Local & Nuvem)"
+    subtitle = f"Modelo Ativo: [bold yellow]{active_model}[/bold yellow] | Modo: {yolo_badge}"
     
     body = (
-        f"{title_art}\n\n"
-        f"🇧🇷 [bold green]llmCli-BR[/bold green] [bold cyan]— Assistente IA de Código Híbrido[/bold cyan] [dim](Local & Nuvem)[/dim]\n"
-        f"{sep}\n"
-        f"• [bold white]Modelo Ativo:[/bold white]   [bold yellow]{active_model}[/bold yellow]  [dim]|[/dim]  [bold white]Modo:[/bold white] {yolo_badge}\n"
-        f"• [bold white]Endpoints:[/bold white]      [dim]llama.cpp (8080) | Ollama (11434) | LM Studio | Nuvem[/dim]\n"
-        f"{sep}\n"
-        f"[dim]Digite [bold green]/help[/bold green] para comandos, [bold yellow]/model[/bold yellow] para trocar IA ou [bold cyan]/scan[/bold cyan] para escanear a rede.[/dim]"
+        f"{title}\n{subtitle}\n\n"
+        "[dim]Suporte nativo a llama.cpp (porta 8080), Ollama, LM Studio, vLLM, Gemini, OpenAI, Anthropic e DeepSeek.[/dim]\n"
+        "[dim]Digite [bold]/help[/bold] para ver comandos ou [bold]/yolo[/bold] para alternar o modo autônomo.[/dim]"
     )
-    
-    console.print(Panel(body, border_style="bright_green", padding=(1, 2)))
+    console.print(Panel(body, border_style="cyan", padding=(1, 2)))
 
 
 def print_diff(diff_text: str, filename: str = "") -> None:
