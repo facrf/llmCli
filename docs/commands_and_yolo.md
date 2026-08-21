@@ -46,7 +46,10 @@ O modo **YOLO** (*You Only Live Once* / Full Autonomous Access) foi desenvolvido
 | Comando | Sintaxe / Exemplo | Descrição |
 | :--- | :--- | :--- |
 | **`/yolo`** | `/yolo` | Alterna o modo autônomo total (on/off). |
+| **`/scan`** | `/scan 192.168.0.11` | Escaneia o IP/host e detecta automaticamente todos os servidores e modelos de LLM ativos. |
+| **`/host`** | `/host 192.168.0.11` | Conecta ao IP/host informado e configura como endpoint padrão para Ollama e llama.cpp. |
 | **`/model`** | `/model llamacpp/default`<br>`/model gemini/gemini-2.5-flash` | Troca o modelo de LLM ativo em tempo real. |
+
 | **`/models`** | `/models` | Lista status de saúde de todos os provedores locais e em nuvem. |
 | **`/add`** | `/add src/core/agent.py`<br>`/add src/tools/` | Adiciona um arquivo ou pasta inteira ao contexto ativo. Suporta `Tab` para autocomplete. |
 | **`/drop`** | `/drop src/core/agent.py` | Remove um arquivo do contexto ativo. |

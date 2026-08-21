@@ -9,7 +9,10 @@
 - 🔄 **Suporte Híbrido Completo:**
   - **Local:** **llama.cpp** (`http://localhost:8080`), **Ollama** (`http://localhost:11434`), **LM Studio** (`http://localhost:1234/v1`), **vLLM** (`http://localhost:8000/v1`).
   - **Nuvem:** **Google Gemini**, **OpenAI GPT-4o / o-series**, **Anthropic Claude 3.7 / 3.5**, **DeepSeek V3 / R1**, **Groq**, **OpenRouter**.
+- 📡 **Descoberta Automática de Modelos por IP (`--scan` / `/scan` / `/host`):**
+  - Passando o IP de qualquer máquina da sua rede (ex: `192.168.0.11`), o `llmCli` faz uma varredura paralela, detecta os servidores e modelos ativos e permite conectar instantaneamente.
 - ⚡ **Modo YOLO (`/yolo`):** Modo de execução autônoma total. Quando ativado, a IA aplica edições de arquivos e executa comandos no terminal sem interromper para pedir confirmações a cada passo.
+
 - 🛠️ **Edição Inteligente de Código:**
   - Suporte a *Function Calling* nativo para modelos de ponta.
   - Suporte a blocos *SEARCH/REPLACE* tolerantes a espaços em branco (estilo Aider) para modelos locais sem function calling nativo.
