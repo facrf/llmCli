@@ -4,7 +4,14 @@ from __future__ import annotations
 import argparse
 import asyncio
 import sys
+from pathlib import Path
 from typing import List, Optional
+
+# Garantir que a raiz do projeto esteja no sys.path para execucoes diretas
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 from src import __version__
 from src.config import get_config
 from src.core.agent import Agent
