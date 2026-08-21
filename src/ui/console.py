@@ -96,3 +96,28 @@ def print_status_table(status_list: list) -> None:
         )
 
     console.print(table)
+
+
+def print_scan_results(host: str, services: list) -> None:
+    if not services:
+        console.print(f"\n[bold yellow]Nenhum servidor de LLM ativo encontrado no host '{host}'.[/bold yellow]")
+        console.print("[dim]Certifique-se de que o servidor (Ollama na porta 11434 ou llama.cpp na porta 8080) está rodando e acessível na rede.[/dim]\n")
+        return
+
+    table = Table(title=f"Serviços e Modelos Detectados em {host}", border_style="green")
+    table.add_column("Serviço / Servidor", style="bold cyan")
+    table.add_column("Endpoint", style="dim")
+    table.add_column("Modelos Disponíveis", style="yellow")
+    table.add_column("Comando para Usar", style="bold green")
+
+    for s in services:
+        models_text = ", ".join(s.models) if s.models else "(modelo padrão ativo)"
+        cmd_example = f"/model {s.provider_type}/{s.models[0]}" if s.models else f"/model {s.provider_type}/default"
+        table.add_row(
+            s.service_name,
+            s.base_url,
+            models_text,
+            cmd_example
+        )
+
+    console.print(table)

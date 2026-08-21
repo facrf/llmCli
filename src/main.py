@@ -10,7 +10,8 @@ from src.config import get_config
 from src.core.agent import Agent
 from src.core.session import Session
 from src.providers.registry import ProviderRegistry
-from src.ui.console import console, print_status_table
+from src.providers.scanner import HostScanner
+from src.ui.console import console, print_scan_results, print_status_table
 from src.ui.repl import ReplSession
 
 
@@ -23,6 +24,8 @@ def parse_arguments(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser.add_argument("-m", "--model", help="Modelo de LLM a ser utilizado (ex: llamacpp/default, gemini/gemini-2.5-flash, openai/gpt-4o).")
     parser.add_argument("-y", "--yolo", action="store_true", help="Ativa o modo YOLO (execução autônoma total sem pedir confirmação).")
     parser.add_argument("-f", "--file", action="append", default=[], help="Adiciona arquivo(s) ao contexto inicial.")
+    parser.add_argument("--scan", metavar="IP", help="Escaneia um IP/host e detecta automaticamente todos os modelos e servidores de LLM ativos.")
+    parser.add_argument("--host", metavar="IP", help="Conecta ao IP/host informado e configura como endpoint padrão para Ollama e llama.cpp.")
     parser.add_argument("--models", action="store_true", help="Verifica e lista todos os provedores e modelos disponíveis.")
     parser.add_argument("-v", "--version", action="version", version=f"llmCli v{__version__}")
     return parser.parse_args(argv)
@@ -32,11 +35,37 @@ async def async_main() -> int:
     args = parse_arguments()
     config = get_config()
 
+    # Escanear IP e sair se passado --scan
+    if args.scan:
+        console.print(f"[dim]Escaneando host [bold yellow]{args.scan}[/bold yellow] em busca de modelos de LLM...[/dim]")
+        scanner = HostScanner(args.scan)
+        services = await scanner.scan()
+        print_scan_results(args.scan, services)
+        return 0
+
+    # Configurar host se passado --host
+    if args.host:
+        console.print(f"[dim]Conectando ao host [bold yellow]{args.host}[/bold yellow] e detectando modelos...[/dim]")
+        scanner = HostScanner(args.host)
+        services = await scanner.scan()
+        print_scan_results(args.host, services)
+        for s in services:
+            if s.provider_type == "ollama":
+                config.local_endpoints.ollama = s.base_url
+            elif s.provider_type == "llamacpp":
+                config.local_endpoints.llamacpp = s.base_url
+        if services and not args.model:
+            chosen = services[0]
+            m_name = chosen.models[0] if chosen.models else "default"
+            config.active_model = f"{chosen.provider_type}/{m_name}"
+            console.print(f"[bold green]✓ Modelo ativo configurado automaticamente para:[/bold green] [bold yellow]{config.active_model}[/bold yellow]\n")
+
     # Sobrescrever configurações via argumentos CLI
     if args.model:
         config.active_model = args.model
     if args.yolo:
         config.yolo_mode = True
+
 
     # Listar modelos e sair se solicitado
     if args.models:

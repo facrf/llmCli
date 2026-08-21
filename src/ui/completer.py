@@ -12,7 +12,10 @@ SLASH_COMMANDS = [
     ("/yolo", "Alterna o modo YOLO (execução autônoma total sem pedir confirmação)"),
     ("/model", "Troca o modelo de LLM ativo (ex: /model llamacpp/default, /model gemini/gemini-2.5-flash)"),
     ("/models", "Lista todos os provedores e modelos locais/nuvem disponíveis"),
+    ("/scan", "Escaneia um IP/host e detecta automaticamente todos os modelos e servidores de LLM ativos (ex: /scan 192.168.0.11)"),
+    ("/host", "Conecta e define o IP/host padrão para Ollama e llama.cpp (ex: /host 192.168.0.11)"),
     ("/add", "Adiciona arquivo(s) ao contexto ativo da IA (ex: /add src/main.py)"),
+
     ("/drop", "Remove arquivo(s) do contexto da IA"),
     ("/files", "Lista arquivos atualmente carregados no contexto"),
     ("/diff", "Exibe as alterações git atuais não commitadas"),

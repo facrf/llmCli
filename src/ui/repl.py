@@ -9,9 +9,11 @@ from prompt_toolkit.styles import Style
 from src.config import get_config
 from src.core.agent import Agent
 from src.providers.registry import ProviderRegistry
+from src.providers.scanner import HostScanner
 from src.tools.git_ops import get_git_diff, undo_last_checkpoint
 from src.ui.completer import CliCompleter
-from src.ui.console import console, print_banner, print_diff, print_status_table
+from src.ui.console import console, print_banner, print_diff, print_scan_results, print_status_table
+
 
 
 prompt_style = Style.from_dict({
@@ -80,6 +82,32 @@ class ReplSession:
             status = await ProviderRegistry.get_status_overview()
             print_status_table(status)
 
+        elif command in ("/scan", "/host", "/discover"):
+            target_host = arg or "127.0.0.1"
+            console.print(f"[dim]Escaneando host [bold yellow]{target_host}[/bold yellow] em busca de servidores e modelos de LLM...[/dim]")
+            scanner = HostScanner(target_host)
+            services = await scanner.scan()
+            print_scan_results(target_host, services)
+
+            # Se encontrou serviços, atualizar endpoints locais automaticamente
+            if services:
+                for s in services:
+                    if s.provider_type == "ollama":
+                        self.config.local_endpoints.ollama = s.base_url
+                    elif s.provider_type == "llamacpp":
+                        self.config.local_endpoints.llamacpp = s.base_url
+
+                # Se o comando foi /host ou o usuário pediu para conectar, ativar o primeiro modelo encontrado
+                if command == "/host" or (len(services) == 1 and services[0].models):
+                    chosen_service = services[0]
+                    model_to_use = chosen_service.models[0] if chosen_service.models else "default"
+                    full_model_name = f"{chosen_service.provider_type}/{model_to_use}"
+                    self.agent.set_model(full_model_name)
+                    console.print(f"[bold green]✓ Conectado com sucesso! Modelo ativo alterado para:[/bold green] [bold yellow]{full_model_name}[/bold yellow]")
+                else:
+                    console.print("[dim]Use [bold]/model <provedor>/<modelo>[/bold] para ativar um dos modelos encontrados acima.[/dim]")
+
+
         elif command == "/add":
             if not arg:
                 console.print("[yellow]Especifique o arquivo ou diretório: /add <caminho>[/yellow]")
@@ -147,8 +175,11 @@ class ReplSession:
         console.print("""
 [bold cyan]Comandos Disponíveis no llmCli:[/bold cyan]
   [bold yellow]/yolo[/bold yellow]             - Alterna o modo YOLO (execução autônoma total sem pedir confirmação)
+  [bold yellow]/scan <ip/host>[/bold yellow]   - Escaneia o IP e detecta automaticamente servidores e modelos ativos
+  [bold yellow]/host <ip/host>[/bold yellow]   - Conecta ao host e define como servidor local ativo (ex: /host 192.168.0.11)
   [bold yellow]/model <nome>[/bold yellow]     - Troca o modelo de LLM (ex: /model llamacpp/default, /model gemini/gemini-2.5-flash)
   [bold yellow]/models[/bold yellow]           - Exibe lista e status de todos os provedores locais e na nuvem
+
   [bold yellow]/add <caminho>[/bold yellow]    - Adiciona arquivo ou diretório ao contexto da IA
   [bold yellow]/drop <caminho>[/bold yellow]   - Remove arquivo do contexto
   [bold yellow]/files[/bold yellow]            - Lista arquivos carregados no contexto atual
