@@ -74,8 +74,15 @@ class Agent:
         print_tool_result(tool_name, result.success, result.output)
         return result
 
+    def get_architect_provider(self) -> LLMProvider:
+        arch_model = self.config.architect_model or "gemini/gemini-2.5-pro"
+        return ProviderRegistry.create_provider(arch_model)
+
     async def run_prompt(self, user_prompt: str, max_iterations: int = 8) -> str:
         """Executa um prompt do usuário através do loop de raciocínio e execução de ferramentas."""
+        if self.config.architect_mode:
+            return await self._run_architect_pipeline(user_prompt, max_iterations)
+
         self.session.add_user_message(user_prompt)
 
         iteration = 0
@@ -159,7 +166,6 @@ class Agent:
             if collected_tool_calls:
                 self.session.add_assistant_message(stream_text, tool_calls=collected_tool_calls)
 
-
                 for tc in collected_tool_calls:
                     res = await self.execute_tool_with_permission(
                         tool_name=tc.name,
@@ -180,3 +186,144 @@ class Agent:
             break
 
         return final_assistant_text
+
+    async def _run_architect_pipeline(self, user_prompt: str, max_iterations: int = 8) -> str:
+        """Pipeline do Modo Arquiteto: O Arquiteto raciocina/planeja e o Editor aplica."""
+        self.session.add_user_message(user_prompt)
+        arch_model = self.config.architect_model or "gemini/gemini-2.5-pro"
+        editor_model = self.config.active_model
+
+        console.print(f"\n[bold magenta]🏛️ [Arquiteto: {arch_model}][/bold magenta] [dim]Planejando solução...[/dim]")
+
+        arch_provider = self.get_architect_provider()
+        messages = self.session.get_full_messages()
+        tools_defs = self.get_tool_definitions()
+
+        arch_text = ""
+        try:
+            async for chunk in arch_provider.chat_stream(
+                messages=messages,
+                tools=tools_defs,
+                temperature=self.config.temperature,
+                max_tokens=self.config.max_tokens
+            ):
+                if chunk.error:
+                    console.print(f"\n[bold red]Erro do Arquiteto:[/bold red] {chunk.error}")
+                    break
+                if chunk.delta_content:
+                    console.print(chunk.delta_content, end="")
+                    arch_text += chunk.delta_content
+        except Exception as e:
+            console.print(f"\n[bold red]Exceção no Arquiteto:[/bold red] {e}")
+
+        console.print()
+
+        if not arch_text:
+            return ""
+
+        self.session.add_assistant_message(arch_text)
+
+        # Confirmar se o usuário deseja aplicar o plano com o editor
+        if not self.config.yolo_mode:
+            choice = ask_user_confirmation(f"Deseja que o Editor ({editor_model}) aplique o plano nos arquivos?")
+            if choice == "abort" or choice == "no":
+                console.print("[dim]Aplicação do plano cancelada pelo usuário.[/dim]")
+                return arch_text
+            elif choice == "yolo":
+                self.config.yolo_mode = True
+                console.print("[bold red]⚡ Modo YOLO ativado![/bold red]")
+
+        console.print(f"\n[bold cyan]⚡ [Editor: {editor_model}][/bold cyan] [dim]Aplicando alterações nos arquivos...[/dim]")
+
+        editor_prompt = (
+            f"Você é o Editor de Código de alta velocidade do llmCli. "
+            f"O Arquiteto elaborou o plano a seguir. Implemente com precisão todas as modificações necessárias usando ferramentas ou blocos SEARCH/REPLACE:\n\n"
+            f"{arch_text}"
+        )
+        self.session.add_user_message(editor_prompt)
+        return await self._run_editor_loop(max_iterations)
+
+    async def _run_editor_loop(self, max_iterations: int = 8) -> str:
+        """Loop de execução rápida de ferramentas e patches do Editor."""
+        iteration = 0
+        final_assistant_text = ""
+
+        while iteration < max_iterations:
+            iteration += 1
+            messages = self.session.get_full_messages()
+            tools_defs = self.get_tool_definitions()
+
+            stream_text = ""
+            collected_tool_calls: List[ToolCall] = []
+            has_error = False
+
+            try:
+                async for chunk in self.provider.chat_stream(
+                    messages=messages,
+                    tools=tools_defs,
+                    temperature=self.config.temperature,
+                    max_tokens=self.config.max_tokens
+                ):
+                    if chunk.error:
+                        console.print(f"\n[bold red]Erro do Editor:[/bold red] {chunk.error}")
+                        has_error = True
+                        break
+                    if chunk.delta_content:
+                        console.print(chunk.delta_content, end="")
+                        stream_text += chunk.delta_content
+                    if chunk.tool_calls:
+                        collected_tool_calls.extend(chunk.tool_calls)
+            except Exception as e:
+                console.print(f"\n[bold red]Exceção no Editor:[/bold red] {e}")
+                has_error = True
+
+            console.print()
+
+            if has_error:
+                break
+
+            final_assistant_text = stream_text
+
+            search_replace_blocks = extract_search_replace_blocks(stream_text)
+            for block in search_replace_blocks:
+                if not self.config.yolo_mode:
+                    choice = ask_user_confirmation(f"Aplicar modificação no arquivo '{block.file_path}'?")
+                    if choice == "abort":
+                        break
+                    elif choice == "yolo":
+                        self.config.yolo_mode = True
+                        console.print("[bold red]⚡ Modo YOLO ativado![/bold red]")
+                    elif choice == "no":
+                        continue
+
+                ok, msg, diff = apply_search_replace_block(block)
+                if diff:
+                    print_diff(diff, block.file_path)
+                print_tool_result("diff_applier", ok, msg)
+                if ok:
+                    await create_checkpoint_commit(f"patch em {block.file_path}")
+
+            parsed_json_calls = extract_json_tool_calls(stream_text)
+            if parsed_json_calls:
+                collected_tool_calls.extend(parsed_json_calls)
+
+            if collected_tool_calls:
+                self.session.add_assistant_message(stream_text, tool_calls=collected_tool_calls)
+                for tc in collected_tool_calls:
+                    res = await self.execute_tool_with_permission(
+                        tool_name=tc.name,
+                        kwargs=tc.arguments,
+                        tool_call_id=tc.id
+                    )
+                    self.session.add_tool_result(
+                        tool_call_id=tc.id,
+                        name=tc.name,
+                        output=res.output
+                    )
+                continue
+
+            self.session.add_assistant_message(stream_text)
+            break
+
+        return final_assistant_text
+

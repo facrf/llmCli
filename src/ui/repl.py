@@ -23,6 +23,7 @@ prompt_style = Style.from_dict({
     "prompt.model": "ansiyellow",
     "prompt.yolo_on": "ansired bold",
     "prompt.yolo_off": "ansigreen",
+    "prompt.arch": "ansimagenta bold",
     "prompt.arrow": "ansicyan bold"
 })
 
@@ -53,12 +54,17 @@ class ReplSession:
         else:
             yolo_tag = '<style class="prompt.yolo_off">🛡️ YOLO: OFF</style>'
 
-        files_count = len(self.agent.session.file_tracker.tracked_files)
-        files_tag = f"files:{files_count}" if files_count > 0 else ""
+        info_parts = [model]
 
-        info_parts = [model, yolo_tag]
-        if files_tag:
-            info_parts.append(files_tag)
+        if self.config.architect_mode:
+            arch_short = self.config.architect_model.split("/")[-1]
+            info_parts.append(f'<style class="prompt.arch">🏛️ ARCH: {arch_short}</style>')
+
+        info_parts.append(yolo_tag)
+
+        files_count = len(self.agent.session.file_tracker.tracked_files)
+        if files_count > 0:
+            info_parts.append(f"files:{files_count}")
 
         info_str = " | ".join(info_parts)
         return HTML(f'<style class="prompt.name">llmCli</style> [{info_str}] <style class="prompt.arrow">❯</style> ')
@@ -92,6 +98,26 @@ class ReplSession:
                 console.print(f"[bold red]⚡ MODO YOLO ATIVADO para [yellow]{self.config.active_model}[/yellow] (preferência salva)![/bold red]")
             else:
                 console.print(f"[bold green]🛡️ MODO YOLO DESATIVADO para [yellow]{self.config.active_model}[/yellow] (preferência salva).[/bold green]")
+
+        elif command in ("/architect", "/arch"):
+            prefs = get_preferences()
+            if not arg:
+                self.config.architect_mode = not self.config.architect_mode
+                prefs.set_global_pref("architect_mode", self.config.architect_mode)
+                if self.config.architect_mode:
+                    console.print(f"[bold magenta]🏛️ MODO ARQUITETO ATIVADO:[/bold magenta] Arquiteto: [bold yellow]{self.config.architect_model}[/bold yellow] | Editor: [bold cyan]{self.config.active_model}[/bold cyan]")
+                else:
+                    console.print("[bold green]🛡️ MODO ARQUITETO DESATIVADO: Usando modelo único padrão.[/bold green]")
+            elif arg.lower() in ("off", "disable", "desativar", "false"):
+                self.config.architect_mode = False
+                prefs.set_global_pref("architect_mode", False)
+                console.print("[bold green]🛡️ MODO ARQUITETO DESATIVADO.[/bold green]")
+            else:
+                self.config.architect_mode = True
+                self.config.architect_model = arg
+                prefs.set_global_pref("architect_mode", True)
+                prefs.set_global_pref("architect_model", arg)
+                console.print(f"[bold magenta]🏛️ MODO ARQUITETO ATIVADO:[/bold magenta] Arquiteto: [bold yellow]{arg}[/bold yellow] | Editor: [bold cyan]{self.config.active_model}[/bold cyan]")
 
         elif command == "/model":
             if not arg:
@@ -343,6 +369,7 @@ class ReplSession:
         console.print("""
 [bold cyan]Comandos Disponíveis no llmCli:[/bold cyan]
   [bold yellow]/yolo[/bold yellow]             - Alterna o modo YOLO (salva preferência por LLM e global)
+  [bold yellow]/architect [mod][/bold yellow]  - Alterna Modo Arquiteto (planejador forte + editor rápido)
   [bold yellow]/scan <ip/host>[/bold yellow]   - Escaneia o IP e detecta automaticamente servidores e modelos ativos
   [bold yellow]/host <ip/host>[/bold yellow]   - Conecta ao host e define como servidor local ativo (ex: /host 192.168.0.11)
   [bold yellow]/model <nome>[/bold yellow]     - Troca o modelo de LLM (carrega preferências salvas daquele modelo)

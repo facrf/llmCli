@@ -35,6 +35,8 @@ class Config(BaseModel):
     project_root: Path = PROJECT_ROOT
     default_model: str = Field(default_factory=lambda: os.getenv("DEFAULT_MODEL", "gemini/gemini-2.5-flash"))
     active_model: str = ""
+    architect_mode: bool = False
+    architect_model: str = Field(default_factory=lambda: os.getenv("ARCHITECT_MODEL", "gemini/gemini-2.5-pro"))
     yolo_mode: bool = Field(default_factory=lambda: os.getenv("YOLO_MODE", "false").lower() in ("true", "1", "yes"))
     temperature: float = 0.2
     max_tokens: int = 4096
@@ -171,6 +173,14 @@ class UserPreferences:
         temp_val = self.get_model_pref(model, "temperature", None)
         if temp_val is not None:
             config.temperature = float(temp_val)
+
+        arch_mode = self.get_global_pref("architect_mode", None)
+        if arch_mode is not None:
+            config.architect_mode = bool(arch_mode)
+
+        arch_model = self.get_global_pref("architect_model", None)
+        if arch_model:
+            config.architect_model = str(arch_model)
 
     def reset(self) -> None:
         """Redefine todas as preferências de usuário e remove o arquivo de persistência."""

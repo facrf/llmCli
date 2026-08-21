@@ -10,6 +10,8 @@ from src.config import get_config
 
 SLASH_COMMANDS = [
     ("/yolo", "Alterna o modo YOLO (execução autônoma total sem pedir confirmação)"),
+    ("/architect", "Alterna Modo Arquiteto (modelo forte para planejar + modelo rápido para editar)"),
+    ("/arch", "Atalho para o comando /architect"),
     ("/model", "Troca o modelo de LLM ativo (ex: /model llamacpp/default, /model gemini/gemini-2.5-flash)"),
     ("/models", "Lista todos os provedores e modelos locais/nuvem disponíveis"),
     ("/scan", "Escaneia um IP/host e detecta automaticamente todos os modelos e servidores de LLM ativos (ex: /scan 192.168.0.11)"),
@@ -94,8 +96,8 @@ class CliCompleter(Completer):
                     yield file_compl
                 return
 
-            # Sugestão de modelos para /model
-            if cmd_part == "/model":
+            # Sugestão de modelos para /model e /architect
+            if cmd_part in ("/model", "/architect", "/arch"):
                 model_arg = parts[1]
                 model_suggestions = [
                     "llamacpp/default",
