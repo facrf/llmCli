@@ -179,3 +179,19 @@ class ProviderRegistry:
             })
 
         return results
+
+    @staticmethod
+    def find_backup_model(current_model: str) -> Optional[str]:
+        """Procura um modelo alternativo disponível caso o atual esteja inacessível."""
+        cloud_candidates = [
+            ("GEMINI_API_KEY", "gemini/gemini-2.5-flash"),
+            ("OPENAI_API_KEY", "openai/gpt-4o"),
+            ("ANTHROPIC_API_KEY", "anthropic/claude-3-7-sonnet-20250219"),
+            ("DEEPSEEK_API_KEY", "deepseek/deepseek-chat"),
+            ("GROQ_API_KEY", "groq/llama-3.3-70b-versatile"),
+            ("OPENROUTER_API_KEY", "openrouter/anthropic/claude-3.5-sonnet")
+        ]
+        for env_var, model_name in cloud_candidates:
+            if os.getenv(env_var) and model_name != current_model:
+                return model_name
+        return None

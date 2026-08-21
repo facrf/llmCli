@@ -47,8 +47,20 @@ class Session:
         self.config = get_config()
         self.file_tracker = file_tracker or FileTracker()
         self.messages: List[ChatMessage] = []
+        self.custom_system_prompt: Optional[str] = None
+
+    def set_custom_system_prompt(self, prompt: str) -> None:
+        """Define um prompt de sistema personalizado para a sessão atual."""
+        self.custom_system_prompt = prompt.strip()
+
+    def reset_system_prompt(self) -> None:
+        """Restaura o prompt de sistema para o padrão."""
+        self.custom_system_prompt = None
 
     def build_system_message(self) -> ChatMessage:
+        if self.custom_system_prompt:
+            return ChatMessage(role="system", content=self.custom_system_prompt)
+
         repo_map = build_repo_map(max_files=60)
         files_context = self.file_tracker.get_context_text()
         prompt_text = SYSTEM_PROMPT_TEMPLATE.format(
@@ -57,6 +69,17 @@ class Session:
             files_context=files_context
         )
         return ChatMessage(role="system", content=prompt_text)
+
+    def compact_history(self, summary_text: str, keep_last_n: int = 2) -> None:
+        """Compacta mensagens anteriores substituindo-as por um resumo consolidado."""
+        if not self.messages:
+            return
+        recent_messages = self.messages[-keep_last_n:] if len(self.messages) > keep_last_n else []
+        summary_msg = ChatMessage(
+            role="system",
+            content=f"=== RESUMO DO CONTEXTO ANTERIOR ===\n{summary_text.strip()}\n===================================="
+        )
+        self.messages = [summary_msg] + recent_messages
 
     def get_full_messages(self) -> List[ChatMessage]:
         """Retorna as mensagens da conversa iniciando pelo prompt de sistema atualizado."""

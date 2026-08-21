@@ -116,6 +116,9 @@ class Agent:
             console.print()  # Quebra de linha final
 
             if has_error:
+                backup_model = ProviderRegistry.find_backup_model(self.config.active_model)
+                if backup_model:
+                    console.print(f"[dim]💡 Dica: Provedor alternativo disponível: [bold green]{backup_model}[/bold green]. Use [bold]/model {backup_model}[/bold] para alternar.[/dim]\n")
                 break
 
             final_assistant_text = stream_text

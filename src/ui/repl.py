@@ -2,17 +2,19 @@
 from __future__ import annotations
 
 import asyncio
+import os
+from pathlib import Path
 from prompt_toolkit import PromptSession
 from prompt_toolkit.formatted_text import HTML
-from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.history import FileHistory, InMemoryHistory
 from prompt_toolkit.styles import Style
 from src.config import get_config
 from src.core.agent import Agent
 from src.providers.registry import ProviderRegistry
 from src.providers.scanner import HostScanner
-from src.tools.git_ops import get_git_diff, undo_last_checkpoint
+from src.tools.git_ops import create_user_commit, get_git_diff, get_raw_git_diff, undo_last_checkpoint
 from src.ui.completer import CliCompleter, resolve_slash_command
-from src.ui.console import console, print_banner, print_diff, print_scan_results, print_status_table
+from src.ui.console import ask_user_confirmation, console, print_banner, print_diff, print_scan_results, print_status_table
 
 
 
@@ -29,8 +31,16 @@ class ReplSession:
     def __init__(self, agent: Agent) -> None:
         self.agent = agent
         self.config = get_config()
+        
+        # Histórico persistente em ~/.llmcli_history
+        history_path = Path.home() / ".llmcli_history"
+        try:
+            history = FileHistory(str(history_path))
+        except Exception:
+            history = InMemoryHistory()
+
         self.prompt_session: PromptSession = PromptSession(
-            history=InMemoryHistory(),
+            history=history,
             completer=CliCompleter(),
             style=prompt_style,
             complete_while_typing=True
@@ -149,6 +159,56 @@ class ReplSession:
             diff_text = await get_git_diff()
             print_diff(diff_text, "Modificações Git Pendentes")
 
+        elif command == "/commit":
+            if not arg:
+                raw_diff = await get_raw_git_diff()
+                if not raw_diff:
+                    console.print("[yellow]Nenhuma alteração Git não commitada encontrada para gerar commit.[/yellow]")
+                else:
+                    console.print("[dim]Analisando alterações Git e gerando mensagem de commit semântica...[/dim]")
+                    prompt = (
+                        "Gere uma mensagem de commit curta, concisa e semântica no padrão Conventional Commits (ex: feat: ..., fix: ..., refactor: ...) "
+                        "para as seguintes alterações Git. Responda APENAS com a mensagem de commit de uma linha (ou poucas linhas), sem explicações adicionais:\n\n"
+                        f"```diff\n{raw_diff[:3000]}\n```"
+                    )
+                    proposed_msg = (await self.agent.run_prompt(prompt)).strip()
+                    if proposed_msg.startswith("```"):
+                        lines = [l for l in proposed_msg.splitlines() if not l.startswith("```")]
+                        proposed_msg = lines[0] if lines else proposed_msg
+                    proposed_msg = proposed_msg.strip("`'\"\n ")
+                    console.print(f"\n[bold green]Mensagem sugerida:[/bold green] [bold yellow]{proposed_msg}[/bold yellow]")
+                    if not self.config.yolo_mode:
+                        choice = ask_user_confirmation("Deseja criar o commit com esta mensagem?")
+                        if choice not in ("yes", "yolo"):
+                            console.print("[dim]Commit cancelado.[/dim]")
+                            return True
+                        if choice == "yolo":
+                            self.config.yolo_mode = True
+                    ok, msg = await create_user_commit(proposed_msg)
+                    style = "green" if ok else "red"
+                    console.print(f"[{style}]{msg}[/{style}]")
+            else:
+                ok, msg = await create_user_commit(arg)
+                style = "green" if ok else "red"
+                console.print(f"[{style}]{msg}[/{style}]")
+
+        elif command == "/review":
+            raw_diff = await get_raw_git_diff()
+            if not raw_diff:
+                console.print("[yellow]Nenhuma alteração Git detectada para Code Review.[/yellow]")
+            else:
+                console.print("[dim]Executando Code Review nas alterações Git pendentes...[/dim]")
+                review_prompt = (
+                    "Faça um Code Review técnico detalhado e construtivo das alterações Git abaixo.\n"
+                    "Avalie:\n"
+                    "1. 🐛 Possíveis bugs, regressões ou edge cases não tratados\n"
+                    "2. 🔒 Segurança e integridade de dados\n"
+                    "3. ⚡ Otimizações de desempenho e boas práticas de código\n"
+                    "4. 💡 Sugestões de melhoria\n\n"
+                    f"```diff\n{raw_diff[:5000]}\n```"
+                )
+                await self.agent.run_prompt(review_prompt)
+
         elif command == "/undo":
             ok, msg = await undo_last_checkpoint()
             style = "green" if ok else "red"
@@ -161,6 +221,26 @@ class ReplSession:
                 res = await self.agent.tools["run_command"].execute(command=arg)
                 console.print(res.output)
 
+        elif command == "/test":
+            test_cmd = f"pytest {arg}".strip() if arg else "pytest"
+            console.print(f"[dim]Executando suíte de testes: [bold yellow]{test_cmd}[/bold yellow]...[/dim]")
+            res = await self.agent.tools["run_command"].execute(command=test_cmd)
+            console.print(res.output)
+            if not res.success:
+                console.print("\n[bold red]✗ Falha detectada nos testes.[/bold red]")
+                should_fix = self.config.yolo_mode
+                if not self.config.yolo_mode:
+                    choice = ask_user_confirmation("Deseja que a IA analise o erro e tente corrigir o código?")
+                    if choice in ("yes", "yolo"):
+                        if choice == "yolo":
+                            self.config.yolo_mode = True
+                        should_fix = True
+                if should_fix:
+                    await self.agent.run_prompt(
+                        f"Os testes falharam ao executar `{test_cmd}` com a seguinte saída:\n```\n{res.output[-2000:]}\n```\n"
+                        "Por favor, analise a stack trace e corrija o código para fazer os testes passarem."
+                    )
+
         elif command == "/clear":
             self.agent.session.clear_history()
             console.print("[green]Histórico da conversa limpo com sucesso.[/green]")
@@ -169,6 +249,63 @@ class ReplSession:
             self.agent.session.clear_history()
             self.agent.session.file_tracker.clear()
             console.print("[green]Sessão reiniciada (histórico e arquivos de contexto limpos).[/green]")
+
+        elif command == "/compact":
+            if not self.agent.session.messages:
+                console.print("[dim]Histórico da conversa está vazio, nada a compactar.[/dim]")
+            else:
+                console.print("[dim]Compactando histórico da conversa com resumo consolidado...[/dim]")
+                history_text = "\n".join(f"{m.role}: {m.content[:200]}" for m in self.agent.session.messages)
+                compact_prompt = (
+                    "Resuma de forma concisa o histórico da conversa a seguir, preservando todas as decisões técnicas importantes, arquivos modificados e requisitos acordados:\n\n"
+                    f"{history_text[:4000]}"
+                )
+                summary = await self.agent.run_prompt(compact_prompt)
+                self.agent.session.compact_history(summary)
+                tokens = self.agent.session.estimate_tokens()
+                console.print(f"[bold green]✓ Histórico compactado com sucesso![/bold green] Estimativa atual: [bold cyan]~{tokens} tokens[/bold cyan]")
+
+        elif command in ("/temp", "/temperature"):
+            if not arg:
+                console.print(f"Temperatura atual: [bold yellow]{self.config.temperature}[/bold yellow] (padrão: 0.2)")
+                console.print("[dim]Use '/temp <valor>' (ex: /temp 0.0 para determinístico, /temp 0.7 para criativo)[/dim]")
+            else:
+                try:
+                    val = float(arg)
+                    if not (0.0 <= val <= 2.0):
+                        console.print("[red]Temperatura deve estar entre 0.0 e 2.0.[/red]")
+                    else:
+                        self.config.temperature = val
+                        console.print(f"[bold green]✓ Temperatura alterada para:[/bold green] [bold yellow]{val}[/bold yellow]")
+                except ValueError:
+                    console.print("[red]Valor de temperatura inválido. Use um número float (ex: /temp 0.2).[/red]")
+
+        elif command == "/system":
+            if not arg:
+                current = self.agent.session.custom_system_prompt or "(Padrão oficial do llmCli)"
+                console.print(f"[bold cyan]System Prompt Ativo:[/bold cyan]\n{current}")
+                console.print("[dim]Use '/system <texto>' para alterar ou '/system reset' para voltar ao padrão.[/dim]")
+            elif arg.lower() == "reset":
+                self.agent.session.reset_system_prompt()
+                console.print("[green]System prompt redefinido para o padrão com sucesso.[/green]")
+            else:
+                self.agent.session.set_custom_system_prompt(arg)
+                console.print("[bold green]✓ System prompt personalizado configurado para esta sessão.[/bold green]")
+
+        elif command == "/paste":
+            console.print("[bold cyan]📋 Modo Multilinha ativado.[/bold cyan] [dim]Digite ou cole seu código/texto. Digite ':done' em uma linha para enviar ou ':cancel' para abortar.[/dim]")
+            lines = []
+            while True:
+                line = await self.prompt_session.prompt_async("... ")
+                if line.strip() == ":done":
+                    break
+                elif line.strip() == ":cancel":
+                    console.print("[dim]Modo multilinha cancelado.[/dim]")
+                    return True
+                lines.append(line)
+            full_text = "\n".join(lines).strip()
+            if full_text:
+                await self.agent.run_prompt(full_text)
 
         elif command == "/tokens":
             tokens = self.agent.session.estimate_tokens()
@@ -195,8 +332,16 @@ class ReplSession:
   [bold yellow]/drop <caminho>[/bold yellow]   - Remove arquivo do contexto
   [bold yellow]/files[/bold yellow]            - Lista arquivos carregados no contexto atual
   [bold yellow]/diff[/bold yellow]             - Exibe alterações Git não commitadas
+  [bold yellow]/commit [msg][/bold yellow]      - Gera commit semântico via IA ou cria commit direto
+  [bold yellow]/review[/bold yellow]           - Executa Code Review das alterações Git pendentes
   [bold yellow]/undo[/bold yellow]             - Reverte a última modificação ou commit gerado pela IA
+  [bold yellow]/test [args][/bold yellow]      - Roda testes (pytest) e sugere correção automática se falhar
   [bold yellow]/run <comando>[/bold yellow]   - Executa comando no terminal da raiz do projeto
+
+  [bold yellow]/paste[/bold yellow]            - Inicia modo multilinha para colar blocos de código
+  [bold yellow]/compact[/bold yellow]          - Compacta o histórico da conversa gerando resumo consolidado
+  [bold yellow]/temp [valor][/bold yellow]     - Exibe ou altera a temperatura do modelo (ex: /temp 0.2)
+  [bold yellow]/system [txt][/bold yellow]     - Exibe, altera ou redefine o system prompt (ex: /system reset)
   [bold yellow]/clear[/bold yellow]            - Limpa o histórico de mensagens da conversa
   [bold yellow]/reset[/bold yellow]            - Limpa o histórico e esvazia o contexto de arquivos
   [bold yellow]/tokens[/bold yellow]           - Exibe estimativa de tokens do contexto

@@ -85,3 +85,31 @@ async def undo_last_checkpoint() -> Tuple[bool, str]:
     if code_restore == 0:
         return True, "Modificações não commitadas foram revertidas com sucesso."
     return False, f"Não foi possível reverter: {err}"
+
+
+async def get_raw_git_diff() -> str:
+    """Retorna o diff bruto (unstaged + staged) do repositório ou string vazia se limpo."""
+    if not await is_git_repo():
+        return ""
+    code_unstaged, out_unstaged, _ = await run_git_cmd("diff")
+    code_staged, out_staged, _ = await run_git_cmd("diff", "--cached")
+    
+    diff_parts = []
+    if out_unstaged.strip():
+        diff_parts.append(out_unstaged.strip())
+    if out_staged.strip():
+        diff_parts.append(out_staged.strip())
+    return "\n\n".join(diff_parts)
+
+
+async def create_user_commit(message: str) -> Tuple[bool, str]:
+    """Realiza git add -A e cria um commit explícito com a mensagem informada."""
+    if not await is_git_repo():
+        return False, "Git não está configurado neste repositório."
+    
+    await run_git_cmd("add", "-A")
+    code, out, err = await run_git_cmd("commit", "-m", message.strip())
+    if code == 0:
+        _, hash_out, _ = await run_git_cmd("rev-parse", "--short", "HEAD")
+        return True, f"Commit criado com sucesso [{hash_out}]: {message.strip()}"
+    return False, f"Erro ao criar commit: {err or out}"
