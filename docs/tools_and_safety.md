@@ -1,44 +1,50 @@
 # 🛡️ Ferramentas, Segurança e Checkpoints Git
 
-O **llmCli** opera com princípios rigorosos de segurança e integridade de código, garantindo que suas tarefas sejam realizadas com proteção total do seu sistema operacional.
+O **llmCli** opera com princípios rigorosos de segurança e integridade de código, garantindo que tarefas sejam realizadas com proteção total do seu ambiente de trabalho.
 
 ---
 
 ## 🔒 1. Política de Isolamento do Workspace (AGENTS.md)
 
-Em conformidade estrita com o arquivo [AGENTS.md](file:///storage/www/projetos/utils/llmCli/AGENTS.md):
+Em conformidade estrita com as diretrizes do [AGENTS.md](file:///storage/www/projetos/utils/llmCli/AGENTS.md):
 
-1. **Sandbox de Caminhos:**
-   - Todas as ferramentas de leitura e escrita validam a árvore de caminhos. Tentativas de acessar diretórios como `/etc`, `/home` ou pastas fora de `/storage/www/projetos/utils/llmCli` são bloqueadas imediatamente pelo resolvedor de caminhos seguros (`_resolve_safe_path`).
-2. **Execução de Comandos Segura:**
+1. **Sandbox de Arquivos e Diretórios:**
+   - Todas as ferramentas de leitura e escrita validam a árvore de caminhos. Tentativas de acessar diretórios fora da raiz do repositório (`/storage/www/projetos/utils/llmCli`) são bloqueadas imediatamente pelo resolvedor de caminhos seguros (`_resolve_safe_path`).
+2. **Execução Controlada de Comandos:**
    - Comandos de shell são executados exclusivamente com `Cwd` apontado para a raiz do repositório.
-   - Padrões potencialmente catastróficos (como `rm -rf /` ou fork bombs) são interceptados e cancelados.
+   - Padrões potencialmente destrutivos (como `rm -rf /` ou comandos globais perigosos) são bloqueados antes da execução.
    - Todos os comandos possuem um tempo limite configurável (`command_timeout_seconds`, padrão 60s) para evitar travamentos infinitos.
+3. **Proteção de Segredos e Chaves:**
+   - Chaves de API e variáveis confidenciais são mantidas exclusivamente no arquivo `.env` (ignorado pelo `.gitignore`) e nunca salvas ou expostas no histórico de commits.
 
 ---
 
-## 🛠️ 2. Ferramentas Disponíveis para o Agente
+## 🛠️ 2. Catálogo de Ferramentas Nativas do Agente
 
 | Ferramenta | Parâmetros | Descrição |
 | :--- | :--- | :--- |
-| `read_file` | `path`, `start_line`, `end_line` | Lê conteúdo de arquivos com paginação opcional por linha. |
-| `write_file` | `path`, `content` | Escreve ou sobrescreve arquivos dentro do workspace. |
+| `read_file` | `path`, `start_line`, `end_line` | Lê o conteúdo de arquivos com paginação opcional por linha. |
+| `write_file` | `path`, `content` | Grava ou sobrescreve arquivos dentro do workspace com criação automática de pastas pai. |
 | `list_dir` | `path`, `max_depth` | Lista arquivos e subpastas de forma estruturada. |
 | `grep_search` | `query`, `path`, `case_sensitive` | Realiza buscas textuais ou regex em arquivos do projeto. |
 | `find_files` | `pattern`, `path` | Encontra arquivos usando padrões glob (ex: `*.py`, `test_*`). |
 | `run_command` | `command`, `timeout_seconds` | Executa comandos no terminal do workspace capturando stdout/stderr. |
+| `semantic_search` | `query`, `top_k` | Busca funções, classes e trechos no código indexado com pontuação BM25. |
+| `web_search` | `query`, `max_results` | Pesquisa soluções, documentações e referências na Web (DuckDuckGo/Tavily). |
+| `read_url` | `url`, `max_chars` | Extrai texto limpo e legível a partir de URLs ou documentações online. |
+| `mcp_*` | `kwargs dinâmicos` | Ferramentas registradas dinamicamente via servidores MCP configurados. |
 
 ---
 
-## 🔄 3. Estratégias Híbridas de Edição
+## 🔄 3. Estratégias Híbridas de Edição de Código
 
-O assistente possui capacidade de adaptação dinâmica:
+O assistente adapta dinamicamente sua estratégia de edição:
 
-### A. Function Calling (Nativo)
-Utilizado quando o modelo possui suporte nativo a ferramentas (como Gemini 2.5 Flash/Pro, GPT-4o, Claude 3.7 Sonnet). As chamadas são estruturadas em JSON schemas estritos.
+### A. Function Calling Nativo
+Utilizado automaticamente em modelos com suporte nativo (Gemini 2.5 Flash/Pro, GPT-4o, Claude 3.7 Sonnet). As chamadas de ferramentas utilizam schemas JSON estritos validados via Pydantic.
 
-### B. Blocos SEARCH/REPLACE (Estilo Aider)
-Para modelos locais (como llama.cpp ou Ollama menores) que não suportam function calling nativo, o sistema processa automaticamente blocos no padrão:
+### B. Blocos SEARCH/REPLACE Tolerantes (Estilo Aider)
+Para modelos locais (como llama.cpp ou Ollama menores) ou modelos sem suporte a function calling nativo, o sistema processa blocos no padrão:
 
 ```text
 Arquivo: src/exemplo.py
@@ -49,7 +55,7 @@ novo_codigo_atualizado
 >>>>>>>
 ```
 
-O módulo [diff_applier.py](file:///storage/www/projetos/utils/llmCli/src/core/diff_applier.py) possui tolerância a diferenças de espaços e identação (*fuzzy whitespace matching*).
+O módulo [diff_applier.py](file:///storage/www/projetos/utils/llmCli/src/core/diff_applier.py) possui tolerância inteligente a variações de espaços em branco e identação (*fuzzy whitespace matching*).
 
 ---
 
@@ -62,3 +68,11 @@ Antes de aplicar qualquer modificação de arquivo:
    /undo
    ```
 3. O `llmCli` reverterá o snapshot com segurança, restaurando seu código ao estado anterior.
+
+---
+
+## 🔍 5. Code Review e Commits Semânticos
+
+- **`/review`**: Analisa automaticamente as diferenças (`git diff`) pendentes no repositório, identificando potenciais bugs, regressões, riscos de segurança e oportunidades de refatoração.
+- **`/commit`**: Analisa o código modificado e propõe mensagens padronizadas no formato *Conventional Commits* (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`).
+

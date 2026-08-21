@@ -11,6 +11,13 @@
 #   - groq/llama-3.3-70b-versatile
 default_model: "gemini/gemini-2.5-flash"
 
+# Modo Arquiteto (Pipeline em duas etapas: Arquiteto planeja e Editor aplica)
+architect_mode: false
+architect_model: "gemini/gemini-2.5-pro"
+
+# Idioma da interface e instruções para a IA (pt-BR, en-US, es-ES, de-DE, fr-FR, zh-CN, ru-RU, hi-IN, auto)
+language: "pt-BR"
+
 # Modo YOLO (execução autônoma de ferramentas e comandos sem pedir confirmação)
 yolo_mode: false
 
@@ -34,3 +41,4 @@ git:
 security:
   workspace_only: true
   command_timeout_seconds: 60
+

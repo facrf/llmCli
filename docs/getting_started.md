@@ -8,15 +8,14 @@ Bem-vindo ao **llmCli**, seu assistente de inteligência artificial interativo p
 
 - **Python:** 3.10 ou superior
 - **Git:** Instalado e configurado no ambiente
-- *(Opcional)* Servidor local de LLM rodando (ex: **llama.cpp** ou **Ollama**) ou chave de API para serviços na nuvem (Google Gemini, OpenAI, Anthropic, DeepSeek, etc.).
+- *(Opcional)* Servidor local de LLM rodando (ex: **llama.cpp**, **Ollama**, **LM Studio**, **vLLM**) ou chave de API para serviços na nuvem (Google Gemini, OpenAI, Anthropic, DeepSeek, Groq, OpenRouter).
 
 ---
 
 ## ⚙️ 1. Instalação Passo a Passo
 
-### Passo 1: Clone ou Acesse o Repositório
+### Passo 1: Acesse a Raiz do Repositório
 
-Navegue até a raiz do projeto:
 ```bash
 cd /storage/www/projetos/utils/llmCli
 ```
@@ -27,7 +26,7 @@ cd /storage/www/projetos/utils/llmCli
 # Criar o ambiente virtual na pasta .venv
 python3 -m venv .venv
 
-# Ativar o ambiente virtual no Linux/macOS
+# Ativar o ambiente virtual no Linux
 source .venv/bin/activate
 ```
 
@@ -47,7 +46,7 @@ Copie o arquivo de modelo [.env.example](file:///storage/www/projetos/utils/llmC
 cp .env.example .env
 ```
 
-Edite o arquivo `.env` para incluir suas chaves ou ajustar as URLs locais:
+Edite o arquivo `.env` com suas credenciais ou endpoints desejados:
 
 ```env
 # Provedores em Nuvem
@@ -58,27 +57,37 @@ DEEPSEEK_API_KEY=sua_chave_deepseek
 GROQ_API_KEY=sua_chave_groq
 OPENROUTER_API_KEY=sua_chave_openrouter
 
+# Pesquisa na Web (Opcional - DuckDuckGo gratuito ativo por padrão)
+TAVILY_API_KEY=sua_chave_tavily
+
 # Provedores Locais
 LLAMACPP_BASE_URL=http://localhost:8080
 OLLAMA_BASE_URL=http://localhost:11434
 LMSTUDIO_BASE_URL=http://localhost:1234/v1
+VLLM_BASE_URL=http://localhost:8000/v1
 
-# Modelo padrão inicial
+# Configurações Gerais
 DEFAULT_MODEL=gemini/gemini-2.5-flash
+ARCHITECT_MODEL=gemini/gemini-2.5-pro
+LLMCLI_LANG=pt-BR
 YOLO_MODE=false
 ```
 
 ---
 
-## 🧪 3. Verificando o Ambiente
+## 🧪 3. Verificando o Ambiente e Conectividade
 
-Para verificar se todos os provedores e credenciais estão configurados corretamente, execute:
+Execute o script de verificação ou use a flag `--models`:
 
 ```bash
+# Verificar status dos provedores
 ./bin/llm-cli --models
+
+# Ou executar o script de diagnóstico
+python3 scripts/health_check.py
 ```
 
-Você verá uma tabela informativa mostrando quais servidores locais estão online e quais provedores na nuvem possuem chaves válidas.
+Você verá uma tabela informativa exibindo quais servidores locais estão online e quais provedores em nuvem estão configurados e prontos.
 
 ---
 
@@ -91,24 +100,35 @@ Inicie a sessão interativa digitando:
 ./bin/llm-cli
 ```
 
-### Modo One-Shot (Execução Direta por Linha de Comando)
+No terminal do assistente, você pode:
+- Conversar e solicitar refatorações no código diretamente.
+- Adicionar arquivos ao contexto com `/add <caminho>` (com autocomplete `Tab`).
+- Ativar o modo autônomo total com `/yolo`.
+- Ativar o modo de planejamento em duas etapas com `/architect`.
+- Fazer busca semântica local no código com `/index` e `/search <conceito>`.
+- Gerar testes com `/gentest <arquivo>` e rodar a suíte com `/test`.
+- Exportar a conversa em relatório HTML com `/export html`.
 
-Você pode passar prompts diretamente pela linha de comando:
+### Modo One-Shot (Execução Direta não-interativa)
+
+Passe instruções diretamente via linha de comando para automações e scripts:
 ```bash
-./bin/llm-cli "Analise o arquivo src/config.py e sugira melhorias"
+./bin/llm-cli "Analise o arquivo src/config.py e adicione docstrings completas" --yolo
 ```
 
-Com inclusão de arquivos e modo YOLO ativado:
+Com carregamento de arquivos específicos e modelo customizado:
 ```bash
-./bin/llm-cli -m llamacpp/default -f src/tools/filesystem.py --yolo "Adicione tratamento para links simbólicos"
+./bin/llm-cli -m llamacpp/default -f src/tools/filesystem.py -y "Adicione suporte a links simbólicos"
 ```
 
 ---
 
 ## 📚 Próximos Passos
 
-- [Descoberta de Modelos por IP](file:///storage/www/projetos/utils/llmCli/docs/network_discovery.md): Como escanear máquinas na rede e conectar a servidores remotos.
-- [Provedores e Modelos](file:///storage/www/projetos/utils/llmCli/docs/models_and_providers.md): Como configurar e subir servidores llama.cpp, Ollama e modelos de nuvem.
-- [Comandos e Modo YOLO](file:///storage/www/projetos/utils/llmCli/docs/commands_and_yolo.md): Aprenda todos os comandos slash disponíveis.
+- [Comandos Slash e Modo YOLO](file:///storage/www/projetos/utils/llmCli/docs/commands_and_yolo.md): Catálogo completo de comandos interativos.
+- [Provedores e Modelos de LLM](file:///storage/www/projetos/utils/llmCli/docs/models_and_providers.md): Presets de modelos locais e nuvem.
+- [Descoberta Automática de Modelos por IP](file:///storage/www/projetos/utils/llmCli/docs/network_discovery.md): Como conectar e escanear nós de inferência na rede local.
+- [Arquitetura do Sistema](file:///storage/www/projetos/utils/llmCli/docs/architecture.md): Estrutura de classes, agentes e subsistemas.
+- [Ferramentas e Segurança](file:///storage/www/projetos/utils/llmCli/docs/tools_and_safety.md): Sandbox e checkpoints Git.
+- [Diagnóstico e Resolução de Problemas](file:///storage/www/projetos/utils/llmCli/docs/troubleshooting.md): Guia de resolução de problemas comuns.
 
-- [Ferramentas e Segurança](file:///storage/www/projetos/utils/llmCli/docs/tools_and_safety.md): Entenda os checkpoints automáticos do Git e restrições do workspace.

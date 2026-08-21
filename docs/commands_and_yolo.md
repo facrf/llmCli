@@ -1,12 +1,12 @@
 # ⚡ Comandos Slash e Modo YOLO
 
-O **llmCli** oferece comandos interativos no terminal para controle do contexto, ferramentas e fluxo de execução.
+O **llmCli** oferece uma interface interativa rica e altamente extensível no terminal com suporte completo a comandos *slash* (`/`), autocomplete contextual e modo autônomo.
 
 ---
 
 ## ⚡ 1. O que é o Modo YOLO (`/yolo`)?
 
-O modo **YOLO** (*You Only Live Once* / Full Autonomous Access) foi desenvolvido para máxima velocidade e produtividade:
+O modo **YOLO** (*You Only Live Once* / Full Autonomous Access) foi desenvolvido para máxima velocidade de desenvolvimento:
 
 ### Comparativo de Modos
 
@@ -15,13 +15,13 @@ O modo **YOLO** (*You Only Live Once* / Full Autonomous Access) foi desenvolvido
 | **Leitura de arquivos e buscas** | Automática | Automática |
 | **Edição e gravação de arquivos** | Pede confirmação (`[s]im / [N]ão / [y]olo / [c]ancelar`) | **Executa automaticamente** |
 | **Comandos de terminal (`run_command`)** | Pede confirmação prévia | **Executa automaticamente** |
-| **Git Checkpoints** | Cria checkpoints antes de cada alteração | **Cria checkpoints antes de cada alteração** |
-| **Reversão com `/undo`** | Disponível | **Totalmente disponível** |
+| **Git Checkpoints de Segurança** | Cria snapshot antes de cada alteração | **Cria snapshot antes de cada alteração** |
+| **Reversão com `/undo`** | Totalmente disponível | **Totalmente disponível** |
+| **Persistência** | Salvo por modelo e globalmente | **Salvo por modelo e globalmente** |
 
 ### Como Ativar / Desativar
 
 1. **Dentro da sessão interativa:**
-   Digite simplesmente:
    ```bash
    /yolo
    ```
@@ -41,27 +41,72 @@ O modo **YOLO** (*You Only Live Once* / Full Autonomous Access) foi desenvolvido
 
 ---
 
-## 🕹️ 2. Tabela Completa de Comandos Slash
+## 🕹️ 2. Catálogo Completo de Comandos Slash
 
-| Comando | Sintaxe / Exemplo | Descrição |
+### 🤖 A. Modelos, Conectividade e Arquitetura
+
+| Comando | Sintaxe | Descrição |
 | :--- | :--- | :--- |
-| **`/yolo`** | `/yolo` | Alterna o modo autônomo total (on/off). |
-| **`/scan`** | `/scan 192.168.0.11` | Escaneia o IP/host e detecta automaticamente todos os servidores e modelos de LLM ativos. |
-| **`/host`** | `/host 192.168.0.11` | Conecta ao IP/host informado e configura como endpoint padrão para Ollama e llama.cpp. |
-| **`/model`** | `/model llamacpp/default`<br>`/model gemini/gemini-2.5-flash` | Troca o modelo de LLM ativo em tempo real. |
+| **`/model`** | `/model`<br>`/model <nome_ou_numero>` | Abre o menu interativo com tabela de modelos ou troca diretamente o modelo ativo (ex: `/model llamacpp/default`, `/model gemini/gemini-2.5-flash`). |
+| **`/models`** | `/models` | Exibe a tabela com o status de conectividade (ONLINE / OFFLINE / CONFIGURADO) de todos os provedores. |
+| **`/architect`** | `/architect [modelo\|off]` | Alterna o Modo Arquiteto. Um modelo planeja a arquitetura da solução e outro aplica as alterações no código. |
+| **`/scan`** | `/scan <ip_ou_host>` | Escaneia portas de servidores de LLM em um IP e lista os modelos disponíveis. |
+| **`/host`** | `/host <ip_ou_host>` | Conecta ao IP remoto, atualiza os endpoints locais e seleciona o modelo disponível. |
+| **`/mcp`** | `/mcp` | Lista os servidores MCP configurados e as ferramentas dinâmicas ativas. |
+| **`/lang`** | `/lang [codigo]` | Exibe ou altera o idioma (`pt`, `en`, `es`, `de`, `fr`, `zh`, `ru`, `hi`, `auto`). |
 
-| **`/models`** | `/models` | Lista status de saúde de todos os provedores locais e em nuvem. |
-| **`/add`** | `/add src/core/agent.py`<br>`/add src/tools/` | Adiciona um arquivo ou pasta inteira ao contexto ativo. Suporta `Tab` para autocomplete. |
-| **`/drop`** | `/drop src/core/agent.py` | Remove um arquivo do contexto ativo. |
+---
+
+### 📂 B. Contexto, Código e Pesquisa
+
+| Comando | Sintaxe | Descrição |
+| :--- | :--- | :--- |
+| **`/add`** | `/add <caminho>` | Adiciona um arquivo ou pasta inteira ao contexto da IA (com suporte a `Tab` para autocomplete). |
+| **`/drop`** | `/drop <caminho>` | Remove um arquivo do contexto da IA. |
 | **`/files`** | `/files` | Lista todos os arquivos atualmente anexados ao contexto. |
-| **`/diff`** | `/diff` | Exibe as alterações Git pendentes com syntax highlighting colorido. |
+| **`/index`** | `/index` | Varre o projeto e constrói o índice AST/BM25 offline para busca semântica. |
+| **`/search`** | `/search <termo>` | Executa busca semântica/RAG no código indexado e exibe snippets formatados. |
+| **`/web`** | `/web <pesquisa>` | Realiza busca na internet via DuckDuckGo ou Tavily API. |
+
+---
+
+### 🛠️ C. Git, Segurança e Qualidade de Código
+
+| Comando | Sintaxe | Descrição |
+| :--- | :--- | :--- |
+| **`/diff`** | `/diff` | Exibe as alterações Git não commitadas com syntax highlighting colorido. |
+| **`/commit`** | `/commit [mensagem]` | Analisa o git diff e gera mensagem de commit semântica com IA ou cria commit com a mensagem fornecida. |
+| **`/review`** | `/review` | Executa Code Review das alterações Git pendentes avaliando bugs, segurança e performance. |
 | **`/undo`** | `/undo` | Reverte o último checkpoint / modificação realizada pela IA. |
-| **`/run`** | `/run pytest tests/` | Executa um comando de terminal no workspace e exibe a saída. |
-| **`/clear`** | `/clear` | Limpa o histórico de mensagens mantendo os arquivos carregados. |
-| **`/reset`** | `/reset` | Limpa tanto o histórico quanto os arquivos carregados no contexto. |
-| **`/tokens`** | `/tokens` | Mostra estimativa de caracteres e tokens do contexto atual. |
-| **`/help`** | `/help` | Exibe o menu de ajuda com todos os comandos. |
-| **`/exit`** | `/exit` ou `/quit` | Encerra a execução do assistente. |
+| **`/test`** | `/test [argumentos]` | Executa os testes unitários (`pytest`) e oferece correção automática via IA se houver falhas. |
+| **`/gentest`** | `/gentest <arquivo>` | Gera uma suíte completa de testes unitários com pytest para o arquivo especificado. |
+| **`/run`** | `/run <comando>` | Executa um comando no terminal a partir da raiz do workspace. |
+
+---
+
+### 📋 D. Planejamento, Tarefas e Exportação
+
+| Comando | Sintaxe | Descrição |
+| :--- | :--- | :--- |
+| **`/plan`** | `/plan <objetivo>` | Cria um plano técnico passo a passo e popula automaticamente o checklist `/todo`. |
+| **`/todo`** | `/todo`<br>`/todo add <tarefa>`<br>`/todo check <id>`<br>`/todo clear` | Visualiza e gerencia o checklist interativo de tarefas da sessão. |
+| **`/export`** | `/export`<br>`/export md [caminho]`<br>`/export html [caminho]` | Exporta a sessão completa em Markdown (`.md`) ou HTML interativo estilizado (`.html`). |
+
+---
+
+### ⚙️ E. Sessão, Parâmetros e Histórico
+
+| Comando | Sintaxe | Descrição |
+| :--- | :--- | :--- |
+| **`/paste`** | `/paste` | Inicia o modo multilinha para colar grandes blocos de texto ou código (`:done` para enviar, `:cancel` para abortar). |
+| **`/compact`** | `/compact` | Compacta o histórico da conversa gerando um resumo consolidado de contexto. |
+| **`/temp`** | `/temp [0.0 - 2.0]` | Exibe ou altera a temperatura do modelo ativo (preferência salva por LLM). |
+| **`/system`** | `/system [prompt\|reset]` | Exibe, altera ou redefine o System Prompt da sessão. |
+| **`/clear`** | `/clear` | Limpa o histórico de mensagens mantendo os arquivos no contexto. |
+| **`/reset`** | `/reset`<br>`/reset prefs`<br>`/reset all` | Limpa sessão e contexto, redefine preferências do usuário ou ambos. |
+| **`/tokens`** | `/tokens` | Exibe estimativa de tokens do contexto atual e total acumulado na sessão. |
+| **`/help`** | `/help` | Exibe o menu com o resumo de todos os comandos. |
+| **`/exit`** | `/exit` ou `/quit` | Encerra a aplicação de forma limpa. |
 
 ---
 
@@ -71,4 +116,5 @@ O modo **YOLO** (*You Only Live Once* / Full Autonomous Access) foi desenvolvido
 - **`Enter`**: Envia o comando ou prompt para a IA.
 - **`Ctrl + C`**: Cancela o prompt atual ou interrompe a geração em andamento.
 - **`Ctrl + D`**: Encerra a aplicação de forma limpa.
-- **Setas `Cima` / `Baixo`**: Navega pelo histórico de prompts digitados.
+- **Setas `Cima` / `Baixo`**: Navega pelo histórico de prompts digitados (persistido em `~/.llmcli_history`).
+
