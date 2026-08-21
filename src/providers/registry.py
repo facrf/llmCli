@@ -199,3 +199,66 @@ class ProviderRegistry:
             if os.getenv(env_var) and model_name != current_model:
                 return model_name
         return None
+
+    @staticmethod
+    def get_model_presets() -> List[Dict[str, Any]]:
+        return MODEL_PRESETS
+
+    @staticmethod
+    def resolve_model_by_id_or_name(input_str: str) -> str:
+        clean = input_str.strip()
+        if not clean:
+            return clean
+
+        # Se for número (ex: '1', '2', '8')
+        if clean.isdigit():
+            idx = int(clean)
+            for p in MODEL_PRESETS:
+                if p["id"] == idx:
+                    return p["name"]
+
+        # Se corresponder ao nome ou alias
+        for p in MODEL_PRESETS:
+            if p["name"].lower() == clean.lower():
+                return p["name"]
+
+        for p in MODEL_PRESETS:
+            if clean.lower() in p["name"].lower():
+                return p["name"]
+
+        return clean
+
+
+MODEL_PRESETS: List[Dict[str, Any]] = [
+    # Provedores Locais
+    {"id": 1, "name": "llamacpp/default", "category": "Local", "desc": "llama.cpp server na porta 8080 (padrão local)"},
+    {"id": 2, "name": "llamacpp/qwen2.5-coder", "category": "Local", "desc": "llama.cpp especializado em código"},
+    {"id": 3, "name": "ollama/qwen2.5-coder:7b", "category": "Local", "desc": "Ollama Qwen 2.5 Coder 7B"},
+    {"id": 4, "name": "ollama/deepseek-r1:latest", "category": "Local", "desc": "Ollama DeepSeek R1 Raciocínio"},
+    {"id": 5, "name": "ollama/llama3.3:latest", "category": "Local", "desc": "Ollama Llama 3.3 70B / 8B"},
+    {"id": 6, "name": "lmstudio/default", "category": "Local", "desc": "LM Studio server local (porta 1234)"},
+    {"id": 7, "name": "vllm/default", "category": "Local", "desc": "vLLM server local de alta performance (porta 8000)"},
+
+    # Google Gemini
+    {"id": 8, "name": "gemini/gemini-2.5-flash", "category": "Google", "desc": "Gemini 2.5 Flash (Ultrarrápido, multimodal)"},
+    {"id": 9, "name": "gemini/gemini-2.5-pro", "category": "Google", "desc": "Gemini 2.5 Pro (Raciocínio complexo e código)"},
+
+    # OpenAI / GPT / Codex
+    {"id": 10, "name": "gpt/codex", "category": "OpenAI", "desc": "Codex / GPT Especializado em Código"},
+    {"id": 11, "name": "openai/gpt-4o", "category": "OpenAI", "desc": "GPT-4o Omnimodel topo de linha"},
+    {"id": 12, "name": "openai/gpt-4o-mini", "category": "OpenAI", "desc": "GPT-4o Mini leve e econômico"},
+    {"id": 13, "name": "openai/o3-mini", "category": "OpenAI", "desc": "OpenAI o3-mini Raciocínio Avançado"},
+    {"id": 14, "name": "openai/o1", "category": "OpenAI", "desc": "OpenAI o1 Raciocínio Profundo"},
+
+    # Anthropic Claude
+    {"id": 15, "name": "anthropic/claude-3-7-sonnet-20250219", "category": "Anthropic", "desc": "Claude 3.7 Sonnet (Estado da arte em código)"},
+    {"id": 16, "name": "anthropic/claude-3-5-haiku-20241022", "category": "Anthropic", "desc": "Claude 3.5 Haiku rápido e ágil"},
+
+    # DeepSeek
+    {"id": 17, "name": "deepseek/deepseek-chat", "category": "DeepSeek", "desc": "DeepSeek V3 Chat/Coder"},
+    {"id": 18, "name": "deepseek/deepseek-reasoner", "category": "DeepSeek", "desc": "DeepSeek R1 Reasoner Oficial"},
+
+    # Groq & OpenRouter
+    {"id": 19, "name": "groq/llama-3.3-70b-versatile", "category": "Groq", "desc": "Groq LPU ultraveloz (~300 tokens/s)"},
+    {"id": 20, "name": "openrouter/anthropic/claude-3.5-sonnet", "category": "OpenRouter", "desc": "OpenRouter Hub Multi-LLM"}
+]

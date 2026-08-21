@@ -109,29 +109,12 @@ class CliCompleter(Completer):
             # Sugestão de modelos para /model e /architect
             if cmd_part in ("/model", "/architect", "/arch"):
                 model_arg = parts[1]
-                model_suggestions = [
-                    "llamacpp/default",
-                    "llamacpp/qwen2.5-coder",
-                    "ollama/qwen2.5-coder:latest",
-                    "ollama/deepseek-r1:latest",
-                    "gemini/gemini-2.5-flash",
-                    "gemini/gemini-2.5-pro",
-                    "gpt/codex",
-                    "gpt/gpt-4o",
-                    "gpt/gpt-4o-mini",
-                    "openai/gpt-4o",
-                    "openai/gpt-4o-mini",
-                    "openai/o1",
-                    "openai/o3-mini",
-                    "openai/codex",
-                    "anthropic/claude-3-7-sonnet-20250219",
-                    "deepseek/deepseek-chat",
-                    "groq/llama-3.3-70b-versatile",
-                    "openrouter/anthropic/claude-3.5-sonnet"
-                ]
-                for m in model_suggestions:
-                    if m.startswith(model_arg):
-                        yield Completion(m, start_position=-len(model_arg), display=m, display_meta="Modelo")
+                from src.providers.registry import MODEL_PRESETS
+                for p in MODEL_PRESETS:
+                    m_name = p["name"]
+                    meta_label = f"[{p['category']}] #{p['id']} - {p['desc']}"
+                    if m_name.lower().startswith(model_arg.lower()) or str(p["id"]) == model_arg or model_arg.lower() in m_name.lower():
+                        yield Completion(m_name, start_position=-len(model_arg), display=m_name, display_meta=meta_label)
                 return
 
             # Sugestão de idiomas para /lang e /language

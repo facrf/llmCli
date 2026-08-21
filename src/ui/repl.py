@@ -20,6 +20,7 @@ from src.ui.completer import CliCompleter, resolve_slash_command
 from src.ui.console import ask_user_confirmation, console, print_banner, print_diff, print_scan_results, print_status_table
 from rich.panel import Panel
 from rich.syntax import Syntax
+from rich.table import Table
 
 
 prompt_style = Style.from_dict({
@@ -144,13 +145,50 @@ class ReplSession:
                 console.print(f"[bold green]{t('lang_changed', flag=info['flag'], name=info['name'], code=resolved)}[/bold green]")
 
         elif command == "/model":
+            presets = ProviderRegistry.get_model_presets()
             if not arg:
-                console.print(f"Modelo atual: [bold yellow]{self.config.active_model}[/bold yellow] (Temp: {self.config.temperature})")
-                console.print("[dim]Use '/model <nome>' para alterar (ex: /model llamacpp/default, /model gemini/gemini-2.5-flash, /model gpt/codex)[/dim]")
+                table = Table(title="🤖 Modelos Disponíveis no llmCli", border_style="cyan", show_header=True)
+                table.add_column("#", style="bold cyan", width=4)
+                table.add_column("Categoria", style="yellow", width=12)
+                table.add_column("Nome do Modelo", style="bold white", width=36)
+                table.add_column("Descrição", style="dim", width=44)
+                table.add_column("Status", justify="center", width=10)
+
+                for p in presets:
+                    is_active = (p["name"] == self.config.active_model)
+                    status_badge = "[bold green]✓ ATIVO[/bold green]" if is_active else ""
+                    model_style = "bold green" if is_active else "bold white"
+                    table.add_row(
+                        str(p["id"]),
+                        p["category"],
+                        f"[{model_style}]{p['name']}[/{model_style}]",
+                        p["desc"],
+                        status_badge
+                    )
+                console.print(table)
+                console.print(f"[dim]Modelo ativo: [bold yellow]{self.config.active_model}[/bold yellow] (Temp: {self.config.temperature})[/dim]")
+                
+                try:
+                    chosen = await self.prompt_session.prompt_async(
+                        HTML('<style class="prompt.name">Escolha o modelo (digite o número ou nome)</style> <style class="prompt.arrow">❯</style> ')
+                    )
+                    chosen = chosen.strip()
+                    if chosen:
+                        resolved_model = ProviderRegistry.resolve_model_by_id_or_name(chosen)
+                        self.agent.set_model(resolved_model)
+                        prefs = get_preferences()
+                        prefs.set_global_pref("last_active_model", resolved_model)
+                        yolo_desc = "[bold red]⚡ YOLO: ON[/bold red]" if self.config.yolo_mode else "[bold green]🛡️ YOLO: OFF[/bold green]"
+                        console.print(f"[bold green]✓ Modelo ativo alterado para:[/bold green] [bold yellow]{resolved_model}[/bold yellow] [dim]({yolo_desc} | Temp: {self.config.temperature})[/dim]")
+                except (KeyboardInterrupt, EOFError):
+                    pass
             else:
-                self.agent.set_model(arg)
+                resolved_model = ProviderRegistry.resolve_model_by_id_or_name(arg)
+                self.agent.set_model(resolved_model)
+                prefs = get_preferences()
+                prefs.set_global_pref("last_active_model", resolved_model)
                 yolo_desc = "[bold red]⚡ YOLO: ON[/bold red]" if self.config.yolo_mode else "[bold green]🛡️ YOLO: OFF[/bold green]"
-                console.print(f"[bold green]✓ Modelo ativo alterado para:[/bold green] [bold yellow]{arg}[/bold yellow] [dim]({yolo_desc} | Temp: {self.config.temperature})[/dim]")
+                console.print(f"[bold green]✓ Modelo ativo alterado para:[/bold green] [bold yellow]{resolved_model}[/bold yellow] [dim]({yolo_desc} | Temp: {self.config.temperature})[/dim]")
 
         elif command == "/models":
             console.print("[dim]Verificando status de conectividade dos provedores...[/dim]")

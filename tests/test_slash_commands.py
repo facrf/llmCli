@@ -25,9 +25,18 @@ async def test_slash_model_switch():
     agent = Agent()
     repl = ReplSession(agent=agent)
 
+    # Troca direta por nome
     cont = await repl.handle_slash_command("/model llamacpp/default")
     assert cont is True
     assert agent.config.active_model == "llamacpp/default"
+
+    # Troca por número ID (ex: 8 = gemini/gemini-2.5-flash)
+    await repl.handle_slash_command("/model 8")
+    assert agent.config.active_model == "gemini/gemini-2.5-flash"
+
+    # Troca por número ID (ex: 11 = openai/gpt-4o)
+    await repl.handle_slash_command("/model 11")
+    assert agent.config.active_model == "openai/gpt-4o"
 
 
 @pytest.mark.asyncio
