@@ -18,7 +18,7 @@ from src.ui.repl import ReplSession
 def parse_arguments(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="llm-cli",
-        description="llmCli: Assistente IA de Código Híbrido (Local: llama.cpp/Ollama/LM Studio | Nuvem: Gemini/OpenAI/Claude/DeepSeek)"
+        description="llmCli-BR: Assistente IA de Código Híbrido (Local: llama.cpp/Ollama/LM Studio | Nuvem: Gemini/OpenAI/Claude/DeepSeek)"
     )
     parser.add_argument("prompt", nargs="*", help="Prompt para execução direta (não-interativa).")
     parser.add_argument("-m", "--model", help="Modelo de LLM a ser utilizado (ex: llamacpp/default, gemini/gemini-2.5-flash, openai/gpt-4o).")
@@ -27,7 +27,7 @@ def parse_arguments(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser.add_argument("--scan", metavar="IP", help="Escaneia um IP/host e detecta automaticamente todos os modelos e servidores de LLM ativos.")
     parser.add_argument("--host", metavar="IP", help="Conecta ao IP/host informado e configura como endpoint padrão para Ollama e llama.cpp.")
     parser.add_argument("--models", action="store_true", help="Verifica e lista todos os provedores e modelos disponíveis.")
-    parser.add_argument("-v", "--version", action="version", version=f"llmCli v{__version__}")
+    parser.add_argument("-v", "--version", action="version", version=f"llmCli-BR v{__version__}")
     return parser.parse_args(argv)
 
 

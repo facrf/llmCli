@@ -50,7 +50,7 @@ class ReplSession:
             info_parts.append(files_tag)
 
         info_str = " | ".join(info_parts)
-        return HTML(f'<style class="prompt.name">llmCli</style> [{info_str}] <style class="prompt.arrow">❯</style> ')
+        return HTML(f'<style class="prompt.name">llmCli-BR</style> [{info_str}] <style class="prompt.arrow">❯</style> ')
 
     async def handle_slash_command(self, cmd_line: str) -> bool:
         """Processa comandos iniciados com '/'. Retorna True para continuar o loop ou False para sair."""
@@ -59,7 +59,7 @@ class ReplSession:
         arg = parts[1].strip() if len(parts) > 1 else ""
 
         if command in ("/exit", "/quit", "/q"):
-            console.print("[cyan]Encerrando llmCli. Até logo![/cyan]")
+            console.print("[cyan]Encerrando llmCli-BR. Até logo![/cyan]")
             return False
 
         elif command == "/yolo":
@@ -173,7 +173,7 @@ class ReplSession:
 
     def _print_help(self) -> None:
         console.print("""
-[bold cyan]Comandos Disponíveis no llmCli:[/bold cyan]
+[bold cyan]Comandos Disponíveis no llmCli-BR:[/bold cyan]
   [bold yellow]/yolo[/bold yellow]             - Alterna o modo YOLO (execução autônoma total sem pedir confirmação)
   [bold yellow]/scan <ip/host>[/bold yellow]   - Escaneia o IP e detecta automaticamente servidores e modelos ativos
   [bold yellow]/host <ip/host>[/bold yellow]   - Conecta ao host e define como servidor local ativo (ex: /host 192.168.0.11)
