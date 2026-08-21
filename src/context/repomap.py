@@ -7,13 +7,13 @@ from typing import List
 from src.config import get_config
 
 
-def build_repo_map(max_files: int = 100) -> str:
+def build_repo_map(max_files: int = 250) -> str:
     """Gera um mapa conciso da árvore do projeto para guiar a LLM."""
     config = get_config()
     root = config.project_root
     lines: List[str] = [f"Estrutura do Projeto ({root.name}):"]
 
-    ignored_dirs = {".git", "__pycache__", "node_modules", ".venv", "env", ".cache", "dist", "build"}
+    ignored_dirs = {".git", "__pycache__", "node_modules", ".venv", "env", ".cache", "dist", "build", "bin", "obj", ".pytest_cache"}
     count = 0
 
     for current_dir, dirs, files in os.walk(root):
