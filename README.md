@@ -1,6 +1,9 @@
 # 🤖 llmCli
 
+> **Language / Idioma:** 🇧🇷 [Português](README.md) | 🇺🇸 [English](README_EN.md) | 🇪🇸 [Español](README_ES.md) | 🇩🇪 [Deutsch](README_DE.md) | 🇫🇷 [Français](README_FR.md) | 🇨🇳 [中文](README_ZH.md) | 🇷🇺 [Русский](README_RU.md) | 🇮🇳 [हिन्दी](README_HI.md)
+
 **llmCli** é um assistente de inteligência artificial interativo de última geração para desenvolvimento no terminal (inspirado no OpenAI Codex, Aider e Claude Code), projetado para operar perfeitamente com **LLMs locais** (llama.cpp, Ollama, LM Studio, vLLM) e **LLMs na nuvem** (Google Gemini, OpenAI GPT-4o / o-series, Anthropic Claude 3.7 / 3.5, DeepSeek V3 / R1, Groq, OpenRouter).
+
 
 ---
 
