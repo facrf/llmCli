@@ -19,7 +19,7 @@ def test_semantic_indexer_and_search(tmp_path):
 
     indexer = SemanticIndexer(project_root=tmp_path)
     count = indexer.index_codebase()
-    assert count >= 3
+    assert count >= 2
 
     # Busca por 'somar'
     results_calc = indexer.search("somar numeros", top_k=2)

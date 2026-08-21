@@ -97,9 +97,9 @@ async def test_slash_partial_command_autocomplete():
     agent = Agent()
     repl = ReplSession(agent=agent)
 
-    # /ex ou /exi deve resolver para /exit e encerrar (retornar False)
-    assert await repl.handle_slash_command("/ex") is False
+    # /exi ou /qui deve resolver para /exit / /quit e encerrar (retornar False)
     assert await repl.handle_slash_command("/exi") is False
+    assert await repl.handle_slash_command("/qui") is False
 
     # /yo deve resolver para /yolo e alternar modo
     initial_mode = agent.config.yolo_mode

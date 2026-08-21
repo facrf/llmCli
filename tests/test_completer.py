@@ -37,12 +37,12 @@ def test_resolve_slash_command():
     assert matches == []
 
     # Prefixo único
-    cmd, matches = resolve_slash_command("/ex")
+    cmd, matches = resolve_slash_command("/exi")
     assert cmd == "/exit"
     assert matches == []
 
-    cmd, matches = resolve_slash_command("/exi")
-    assert cmd == "/exit"
+    cmd, matches = resolve_slash_command("/exp")
+    assert cmd == "/export"
 
     cmd, matches = resolve_slash_command("/yo")
     assert cmd == "/yolo"
@@ -53,7 +53,12 @@ def test_resolve_slash_command():
     cmd, matches = resolve_slash_command("/und")
     assert cmd == "/undo"
 
-    # Ambíguo
+    # Ambíguo (/ex pode ser /exit ou /export)
+    cmd, matches = resolve_slash_command("/ex")
+    assert cmd is None
+    assert "/exit" in matches and "/export" in matches
+
+    # Ambíguo (/m pode ser /model ou /models ou /mcp)
     cmd, matches = resolve_slash_command("/m")
     assert cmd is None
     assert "/model" in matches and "/models" in matches
