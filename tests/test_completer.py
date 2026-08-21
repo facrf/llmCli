@@ -26,3 +26,44 @@ def test_completer_file_suggestions():
     doc = Document("/add src/")
     completions = list(completer.get_completions(doc, None))
     assert any("src/main.py" in c.text or "src/config.py" in c.text for c in completions)
+
+
+def test_resolve_slash_command():
+    from src.ui.completer import resolve_slash_command
+
+    # Correspondência exata
+    cmd, matches = resolve_slash_command("/exit")
+    assert cmd == "/exit"
+    assert matches == []
+
+    # Prefixo único
+    cmd, matches = resolve_slash_command("/ex")
+    assert cmd == "/exit"
+    assert matches == []
+
+    cmd, matches = resolve_slash_command("/exi")
+    assert cmd == "/exit"
+
+    cmd, matches = resolve_slash_command("/yo")
+    assert cmd == "/yolo"
+
+    cmd, matches = resolve_slash_command("/cle")
+    assert cmd == "/clear"
+
+    cmd, matches = resolve_slash_command("/und")
+    assert cmd == "/undo"
+
+    # Ambíguo
+    cmd, matches = resolve_slash_command("/m")
+    assert cmd is None
+    assert "/model" in matches and "/models" in matches
+
+    # Ambíguo resolvido com argumento
+    cmd, matches = resolve_slash_command("/mod", has_arg=True)
+    assert cmd == "/model"
+
+    # Desconhecido
+    cmd, matches = resolve_slash_command("/comando_inexistente")
+    assert cmd is None
+    assert matches == []
+

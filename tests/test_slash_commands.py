@@ -89,3 +89,34 @@ async def test_slash_exit():
     repl = ReplSession(agent=agent)
     assert await repl.handle_slash_command("/exit") is False
     assert await repl.handle_slash_command("/quit") is False
+    assert await repl.handle_slash_command("/q") is False
+
+
+@pytest.mark.asyncio
+async def test_slash_partial_command_autocomplete():
+    agent = Agent()
+    repl = ReplSession(agent=agent)
+
+    # /ex ou /exi deve resolver para /exit e encerrar (retornar False)
+    assert await repl.handle_slash_command("/ex") is False
+    assert await repl.handle_slash_command("/exi") is False
+
+    # /yo deve resolver para /yolo e alternar modo
+    initial_mode = agent.config.yolo_mode
+    assert await repl.handle_slash_command("/yo") is True
+    assert agent.config.yolo_mode != initial_mode
+
+    # /tok deve resolver para /tokens
+    assert await repl.handle_slash_command("/tok") is True
+
+    # /ad deve resolver para /add
+    test_path = "src/config.py"
+    assert await repl.handle_slash_command(f"/ad {test_path}") is True
+    assert test_path in agent.session.file_tracker.tracked_files
+
+    # Comando ambiguo como /m (/model vs /models) nao quebra
+    assert await repl.handle_slash_command("/m") is True
+
+    # Comando desconhecido nao quebra
+    assert await repl.handle_slash_command("/desconhecido") is True
+
