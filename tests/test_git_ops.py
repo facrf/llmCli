@@ -18,3 +18,11 @@ async def test_get_git_diff():
 async def test_get_git_status():
     status = await get_git_status()
     assert isinstance(status, str)
+
+
+@pytest.mark.asyncio
+async def test_get_raw_git_diff_and_user_commit():
+    from src.tools.git_ops import get_raw_git_diff, create_user_commit
+    raw_diff = await get_raw_git_diff()
+    assert isinstance(raw_diff, str)
+

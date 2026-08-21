@@ -120,3 +120,38 @@ async def test_slash_partial_command_autocomplete():
     # Comando desconhecido nao quebra
     assert await repl.handle_slash_command("/desconhecido") is True
 
+
+@pytest.mark.asyncio
+async def test_slash_temp_and_system():
+    agent = Agent()
+    repl = ReplSession(agent=agent)
+
+    # /temp
+    assert await repl.handle_slash_command("/temp") is True
+    assert await repl.handle_slash_command("/temp 0.7") is True
+    assert agent.config.temperature == 0.7
+    assert await repl.handle_slash_command("/temp 5.0") is True  # Fora do range, nao quebra
+
+    # /system
+    assert await repl.handle_slash_command("/system") is True
+    assert await repl.handle_slash_command("/system Seja conciso.") is True
+    assert agent.session.custom_system_prompt == "Seja conciso."
+    assert await repl.handle_slash_command("/system reset") is True
+    assert agent.session.custom_system_prompt is None
+
+
+@pytest.mark.asyncio
+async def test_slash_compact_and_review():
+    agent = Agent()
+    repl = ReplSession(agent=agent)
+
+    # /compact em sessao vazia
+    assert await repl.handle_slash_command("/compact") is True
+
+    # /review
+    assert await repl.handle_slash_command("/review") is True
+
+    # /test
+    assert await repl.handle_slash_command("/test tests/test_soma.py") is True
+
+
