@@ -15,6 +15,7 @@ from rich.table import Table
 from src.config import get_config, get_preferences
 from src.core.agent import Agent
 from src.core.exporter import SessionExporter
+from src.core.multi_agent import MultiAgentCoordinator
 from src.core.todo_manager import TodoManager
 from src.i18n import SUPPORTED_LANGUAGES, get_active_language, set_active_language, t
 from src.providers.registry import ProviderRegistry
@@ -50,6 +51,7 @@ class ReplSession:
         self.agent = agent
         self.config = get_config()
         self.todo_manager = TodoManager()
+        self.multi_agent = MultiAgentCoordinator(agent)
         
         # Histórico persistente em ~/.llmcli_history
         history_path = Path.home() / ".llmcli_history"
@@ -136,6 +138,38 @@ class ReplSession:
                 prefs.set_global_pref("architect_mode", True)
                 prefs.set_global_pref("architect_model", arg)
                 console.print(f"[bold magenta]🏛️ MODO ARQUITETO ATIVADO:[/bold magenta] Arquiteto: [bold yellow]{arg}[/bold yellow] | Editor: [bold cyan]{self.config.active_model}[/bold cyan]")
+
+        elif command == "/agents":
+            enabled = "ativo" if self.config.multi_agent.enabled else "desativado"
+            console.print(f"[bold cyan]Modo multiagente: {enabled}[/bold cyan]")
+            for role, model in self.multi_agent.status().items():
+                console.print(f"  • [yellow]{role}[/yellow]: {model}")
+
+        elif command == "/team":
+            if not self.config.multi_agent.enabled:
+                console.print("[yellow]Modo multiagente desativado. Defina multi_agent.enabled: true em config.local.yaml.[/yellow]")
+            elif not arg:
+                console.print("[dim]Use '/team <objetivo>' para planejar ou '/team --apply <objetivo>' para implementar.[/dim]")
+            else:
+                apply_changes = arg.startswith("--apply ")
+                objective = arg.removeprefix("--apply ").strip() if apply_changes else arg
+                if not objective:
+                    console.print("[yellow]Informe um objetivo após --apply.[/yellow]")
+                    return True
+                if apply_changes and not self.config.yolo_mode:
+                    choice = ask_user_confirmation("Aplicar o plano gerado pelo time multiagente?")
+                    if choice in ("abort", "no"):
+                        console.print("[dim]Aplicação multiagente cancelada.[/dim]")
+                        return True
+                    if choice == "yolo":
+                        self.config.yolo_mode = True
+                phase = "o pipeline completo" if apply_changes else "pesquisador e arquiteto"
+                console.print(f"[dim]Executando {phase}...[/dim]")
+                run = await self.multi_agent.run(objective, apply_changes=apply_changes)
+                for report in run.reports:
+                    console.print(f"\n[bold cyan]{report.role}[/bold cyan]\n{report.summary}")
+                if not apply_changes:
+                    console.print("\n[dim]Plano pronto. Use '/team --apply <objetivo>' para executá-lo.[/dim]")
 
         elif command in ("/lang", "/language"):
             prefs = get_preferences()
@@ -572,6 +606,8 @@ class ReplSession:
   [bold yellow]/model <nome>[/bold yellow]     - Troca o modelo de LLM (carrega preferências salvas daquele modelo)
   [bold yellow]/models[/bold yellow]           - Exibe lista e status de todos os provedores locais e na nuvem
   [bold yellow]/mcp[/bold yellow]              - Lista servidores MCP e ferramentas externas ativas
+  [bold yellow]/team <objetivo>[/bold yellow]  - Pesquisa e planeja uma tarefa com agentes especializados
+  [bold yellow]/agents[/bold yellow]           - Exibe papéis e modelos do modo multiagente
 
   [bold yellow]/add <caminho>[/bold yellow]    - Adiciona arquivo ou diretório ao contexto da IA
   [bold yellow]/drop <caminho>[/bold yellow]   - Remove arquivo do contexto

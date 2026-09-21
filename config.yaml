@@ -42,3 +42,8 @@ security:
   workspace_only: true
   command_timeout_seconds: 60
 
+# Modo Multiagente: pipeline sequencial e supervisionado (Fase 1)
+multi_agent:
+  enabled: false
+  max_parallel_agents: 1
+  roles: {}

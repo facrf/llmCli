@@ -32,6 +32,16 @@ class SecurityConfig(BaseModel):
     command_timeout_seconds: int = 60
 
 
+class MultiAgentRoleConfig(BaseModel):
+    model: str = ""
+
+
+class MultiAgentConfig(BaseModel):
+    enabled: bool = False
+    max_parallel_agents: int = 1
+    roles: Dict[str, MultiAgentRoleConfig] = Field(default_factory=dict)
+
+
 class Config(BaseModel):
     project_root: Path = PROJECT_ROOT
     default_model: str = Field(default_factory=lambda: os.getenv("DEFAULT_MODEL", "gemini/gemini-2.5-flash"))
@@ -45,6 +55,7 @@ class Config(BaseModel):
     local_endpoints: LocalEndpoints = Field(default_factory=LocalEndpoints)
     git: GitConfig = Field(default_factory=GitConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
+    multi_agent: MultiAgentConfig = Field(default_factory=MultiAgentConfig)
 
     def model_post_init(self, __context: Any) -> None:
         if not self.active_model:

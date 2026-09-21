@@ -23,6 +23,7 @@ from src.tools.filesystem import (
 )
 from src.tools.git_ops import create_checkpoint_commit, is_worktree_clean
 from src.tools.mcp_client import McpManager
+from src.tools.project_tests import RunProjectTestsTool
 from src.tools.terminal import RunCommandTool
 from src.tools.web_tools import ReadUrlTool, WebSearchTool
 from src.ui.console import (
@@ -35,6 +36,9 @@ from src.ui.console import (
 
 
 class Agent:
+    READ_ONLY_TOOL_NAMES = {
+        "read_file", "list_dir", "grep_search", "find_files", "semantic_search"
+    }
     def __init__(self, session: Optional[Session] = None, architect_provider: Optional[LLMProvider] = None) -> None:
         self.config = get_config()
         self.session = session or Session()
@@ -53,7 +57,8 @@ class Agent:
             "run_command": RunCommandTool(),
             "semantic_search": SemanticSearchTool(self.indexer),
             "web_search": WebSearchTool(),
-            "read_url": ReadUrlTool()
+            "read_url": ReadUrlTool(),
+            "run_project_tests": RunProjectTestsTool(),
         }
         # Registrar ferramentas de servidores MCP externos se configurados
         self.mcp_manager.register_tools_to_agent(self)
@@ -72,6 +77,59 @@ class Agent:
         errors = await self.mcp_manager.discover_tools()
         self.mcp_manager.register_tools_to_agent(self)
         return errors
+
+    async def run_role_prompt(self, role: str, prompt: str, model_name: Optional[str] = None) -> str:
+        """Run a specialized role with an isolated session and read-only tools."""
+        provider = ProviderRegistry.create_provider(model_name or self.config.active_model)
+        role_session = Session(file_tracker=self.session.file_tracker)
+        role_session.add_user_message(
+            f"Você atua como {role}. {prompt}\n\nResponda com evidências objetivas. "
+            "Você pode usar apenas as ferramentas fornecidas para este papel; não pode modificar "
+            "arquivos, executar comandos arbitrários ou chamar ferramentas externas."
+        )
+        allowed_tools = set(self.READ_ONLY_TOOL_NAMES)
+        if role == "tester":
+            allowed_tools.add("run_project_tests")
+        tools = [
+            self.tools[name].get_definition()
+            for name in allowed_tools
+            if name in self.tools
+        ]
+        last_output = ""
+
+        for _ in range(4):
+            output = ""
+            tool_calls: List[ToolCall] = []
+            async for chunk in provider.chat_stream(
+                messages=role_session.get_full_messages(),
+                tools=tools,
+                temperature=self.config.temperature,
+                max_tokens=self.config.max_tokens,
+            ):
+                if chunk.error:
+                    return f"Falha do agente {role}: {chunk.error}"
+                output += chunk.delta_content
+                if chunk.tool_calls:
+                    tool_calls.extend(chunk.tool_calls)
+
+            last_output = output or last_output
+            role_session.add_assistant_message(output, tool_calls=tool_calls or None)
+            if not tool_calls:
+                break
+
+            for call in tool_calls:
+                if call.name not in allowed_tools:
+                    result_text = f"Ferramenta bloqueada para o papel {role}: {call.name}"
+                else:
+                    tool = self.tools[call.name]
+                    try:
+                        result = await tool.execute(**call.arguments)
+                        result_text = result.to_message_text()
+                    except Exception as exc:
+                        result_text = f"Falha na ferramenta {call.name}: {exc}"
+                role_session.add_tool_result(call.id, call.name, result_text)
+
+        return last_output or f"O agente {role} não retornou conteúdo."
 
     async def execute_tool_with_permission(self, tool_name: str, kwargs: Dict[str, Any], tool_call_id: str = "") -> ToolResult:
         tool = self.tools.get(tool_name)

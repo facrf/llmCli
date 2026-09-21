@@ -119,3 +119,63 @@ Pronto, corrigido!
 
     # Limpeza
     target_file.unlink()
+
+
+@pytest.mark.asyncio
+async def test_read_only_role_can_read_but_cannot_write(monkeypatch):
+    agent = Agent(session=Session())
+    blocked_target = agent.config.project_root / "tests" / "role_blocked.txt"
+
+    class RoleProvider(LLMProvider):
+        def __init__(self):
+            super().__init__("role-mock")
+            self.turn = 0
+
+        async def chat_stream(self, messages, tools=None, temperature=0.2, max_tokens=4096):
+            if self.turn == 0:
+                self.turn += 1
+                assert tools and all(tool.name != "write_file" for tool in tools)
+                yield StreamChunk(
+                    tool_calls=[
+                        ToolCall("read", "read_file", {"path": "src/config.py"}),
+                        ToolCall("blocked", "write_file", {"path": "tests/role_blocked.txt", "content": "x"}),
+                    ],
+                    is_done=True,
+                )
+            else:
+                yield StreamChunk(delta_content="Análise concluída.", is_done=True)
+
+        async def check_health(self):
+            return True, "OK"
+
+    provider = RoleProvider()
+    monkeypatch.setattr("src.core.agent.ProviderRegistry.create_provider", lambda *_: provider)
+
+    response = await agent.run_role_prompt("researcher", "Analise a configuração")
+    assert response == "Análise concluída."
+    assert not blocked_target.exists()
+
+
+@pytest.mark.asyncio
+async def test_tester_role_receives_only_the_constrained_test_tool(monkeypatch):
+    agent = Agent(session=Session())
+
+    class TesterProvider(LLMProvider):
+        def __init__(self):
+            super().__init__("tester-mock")
+
+        async def chat_stream(self, messages, tools=None, temperature=0.2, max_tokens=4096):
+            tool_names = {tool.name for tool in tools}
+            assert "run_project_tests" in tool_names
+            assert "run_command" not in tool_names
+            assert "write_file" not in tool_names
+            yield StreamChunk(delta_content="Testes analisados.", is_done=True)
+
+        async def check_health(self):
+            return True, "OK"
+
+    monkeypatch.setattr(
+        "src.core.agent.ProviderRegistry.create_provider", lambda *_: TesterProvider()
+    )
+    response = await agent.run_role_prompt("tester", "Valide a suíte")
+    assert response == "Testes analisados."

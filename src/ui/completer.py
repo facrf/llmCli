@@ -19,6 +19,8 @@ SLASH_COMMANDS = [
     ("/model", "Troca o modelo de LLM ativo (ex: /model llamacpp/default, /model gemini/gemini-2.5-flash)"),
     ("/models", "Lista todos os provedores e modelos locais/nuvem disponíveis"),
     ("/mcp", "Lista servidores MCP configurados e ferramentas externas dinâmicas"),
+    ("/team", "Executa o planejamento sequencial com agentes especializados"),
+    ("/agents", "Exibe papéis e modelos configurados para o modo multiagente"),
     ("/scan", "Escaneia um IP/host e detecta automaticamente todos os modelos e servidores de LLM ativos (ex: /scan 192.168.0.11)"),
     ("/host", "Conecta e define o IP/host padrão para Ollama e llama.cpp (ex: /host 192.168.0.11)"),
     ("/discover", "Escaneia e autodetecta modelos e servidores de LLM ativos no host"),

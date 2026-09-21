@@ -122,6 +122,8 @@ Durante a sessão interativa no terminal:
 | **`/scan`** | `/scan <ip>` | Escaneia um IP/host e detecta servidores e modelos de LLM ativos. |
 | **`/host`** | `/host <ip>` | Conecta ao IP informado e configura endpoints locais automaticamente. |
 | **`/mcp`** | `/mcp` | Lista servidores MCP e ferramentas dinâmicas ativas. |
+| **`/team`** | `/team <objetivo>`<br>`/team --apply <objetivo>` | Planeja com pesquisador/arquiteto ou executa o pipeline supervisionado completo. Requer `multi_agent.enabled: true`. |
+| **`/agents`** | `/agents` | Exibe os papéis e modelos configurados para o modo multiagente. |
 | **`/add`** | `/add <caminho>` | Adiciona arquivo ou pasta ao contexto da IA (com autocomplete `Tab`). |
 | **`/drop`** | `/drop <caminho>` | Remove arquivo do contexto ativo. |
 | **`/files`** | `/files` | Lista todos os arquivos atualmente anexados ao contexto. |
@@ -161,6 +163,7 @@ Explore os guias detalhados na pasta [`docs/`](file:///storage/www/projetos/util
 - 📡 [Descoberta Automática de Modelos por IP](file:///storage/www/projetos/utils/llmCli/docs/network_discovery.md): Varredura assíncrona de rede e conexão com nós de inferência remotos.
 - 🛡️ [Ferramentas e Segurança](file:///storage/www/projetos/utils/llmCli/docs/tools_and_safety.md): Política de isolamento do workspace, catálogo de ferramentas e checkpoints Git.
 - 🔌 [Integração MCP](file:///storage/www/projetos/utils/llmCli/docs/mcp.md): Configuração, segurança e ciclo de vida de servidores MCP via stdio.
+- 👥 [Roadmap Multiagente](file:///storage/www/projetos/utils/llmCli/docs/multi_agent_roadmap.md): Arquitetura e plano de evolução para orquestração de agentes especializados.
 - 🔧 [Diagnóstico e Resolução de Problemas](file:///storage/www/projetos/utils/llmCli/docs/troubleshooting.md): Perguntas frequentes e soluções para erros comuns.
 
 ---
