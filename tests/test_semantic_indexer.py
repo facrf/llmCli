@@ -1,5 +1,6 @@
 """Unit tests for semantic codebase indexer and BM25 search."""
 import pytest
+
 from src.context.semantic_indexer import SemanticIndexer, SemanticSearchTool
 
 

@@ -1,6 +1,7 @@
 """Unit tests for Architect Mode (Combining Planner and Fast Editor models)."""
 import pytest
-from src.config import Config, get_config
+
+from src.config import Config
 from src.core.agent import Agent
 from src.ui.repl import ReplSession
 
@@ -43,8 +44,8 @@ async def test_slash_architect_toggle():
 
 @pytest.mark.asyncio
 async def test_architect_editor_mock_pipeline():
-    from src.providers.base import LLMProvider, StreamChunk
     from src.core.session import Session
+    from src.providers.base import LLMProvider, StreamChunk
 
     class MockArchProvider(LLMProvider):
         def __init__(self):
@@ -81,7 +82,6 @@ async def test_architect_editor_mock_pipeline():
     target_file = agent.config.project_root / "tests/test_patch_sample.txt"
     target_file.write_text("def somar(a, b):\n    return a - b\n", encoding="utf-8")
 
-    res = await agent.run_prompt("Faça a função somar retornar 42")
+    await agent.run_prompt("Faça a função somar retornar 42")
     assert target_file.exists()
     assert "return 42" in target_file.read_text(encoding="utf-8")
-

@@ -1,6 +1,8 @@
 """Tests for autonomous Agent reasoning loop using mock LLM providers."""
-import pytest
 from typing import AsyncGenerator, List, Optional
+
+import pytest
+
 from src.core.agent import Agent
 from src.core.session import Session
 from src.providers.base import ChatMessage, LLMProvider, StreamChunk

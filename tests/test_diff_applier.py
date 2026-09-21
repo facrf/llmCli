@@ -1,9 +1,5 @@
 """Tests for diff applier and Search/Replace block parser."""
-import pytest
-from src.core.diff_applier import (
-    extract_search_replace_blocks,
-    fuzzy_find_and_replace
-)
+from src.core.diff_applier import extract_search_replace_blocks, fuzzy_find_and_replace
 
 
 def test_extract_search_replace_blocks():

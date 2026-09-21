@@ -1,7 +1,6 @@
 """Unit tests for session exporter to Markdown and HTML."""
-import pytest
-from src.core.session import Session
 from src.core.exporter import SessionExporter
+from src.core.session import Session
 
 
 def test_session_exporter_md_and_html(tmp_path):

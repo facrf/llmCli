@@ -1,12 +1,13 @@
 """Dedicated Ollama provider supporting local models & model listing."""
 from __future__ import annotations
 
-import json
-from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
+from typing import Any, AsyncGenerator, List, Optional, Tuple
+
 import httpx
+
 from src.providers.base import ChatMessage, LLMProvider, StreamChunk
 from src.providers.openai_compatible import OpenAICompatibleProvider
-from src.tools.base import ToolCall, ToolDefinition
+from src.tools.base import ToolDefinition
 
 
 class OllamaProvider(LLMProvider):

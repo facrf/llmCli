@@ -1,14 +1,11 @@
 """Terminal output formatting, rich styling, diff views, and user confirmation prompts."""
 from __future__ import annotations
 
-import sys
-from typing import Optional
 from rich.console import Console
-from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.table import Table
-from rich.text import Text
+
 from src.i18n import t
 
 console = Console()

@@ -5,7 +5,8 @@ import fnmatch
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
+
 from src.config import get_config
 from src.tools.base import BaseTool, ToolResult
 

@@ -68,19 +68,21 @@ O Modo Arquiteto divide a resolução de problemas complexos em duas fases espec
 
 ## 🧠 Indexador Semântico & RAG Local (`SemanticIndexer`)
 
-O módulo [semantic_indexer.py](file:///storage/www/projetos/utils/llmCli/src/context/semantic_indexer.py) fornece busca vetorial/semântica no código sem dependências pesadas:
+O módulo [semantic_indexer.py](file:///storage/www/projetos/utils/llmCli/src/context/semantic_indexer.py) fornece busca lexical local no código, usando BM25 e TF-IDF sem dependências pesadas:
 - Faz parsing de arquivos Python via biblioteca padrão `ast` para isolar classes e funções.
 - Para outras linguagens (`.ts`, `.js`, `.go`, `.rs`, `.java`, `.php`, etc.), particiona o arquivo em janelas lógicas com overlap.
 - Constrói um índice invertido em cache local (`.cache/semantic_index.json`).
 - Utiliza algoritmo **BM25** combinado com frequência de termos (TF-IDF) e ponderação no nome de símbolos para classificar os trechos mais relevantes.
+
+Para busca por significado com embeddings, a evolução recomendada é disponibilizar um backend local opcional (por exemplo, `sentence-transformers`) sem trocar o comportamento offline atual por padrão.
 
 ---
 
 ## 🔌 Integração MCP (Model Context Protocol)
 
 O módulo [mcp_client.py](file:///storage/www/projetos/utils/llmCli/src/tools/mcp_client.py) permite conectar ferramentas dinâmicas de terceiros:
-- Lê as definições de servidores em `mcp_servers.json`, `.mcp.json` ou `~/.llmcli_mcp.json`.
-- Registra automaticamente as ferramentas externas no agente com o prefixo `mcp_<servidor>_<ferramenta>`.
+- Lê as definições de servidores em `mcp_servers.json` ou `.mcp.json` na raiz do projeto.
+- Inicia servidores configurados via stdio, executa o handshake JSON-RPC e registra as ferramentas externas no agente com o prefixo `mcp_<servidor>_<ferramenta>`.
 - Permite que a IA invoque serviços externos de banco de dados, deploy, APIs e integrações customizadas.
 
 ---
@@ -103,4 +105,3 @@ A classe `UserPreferences` em [config.py](file:///storage/www/projetos/utils/llm
    - Se `yolo_mode=True`, ferramentas de modificação e patches são executados imediatamente com Git snapshot.
    - Se `yolo_mode=False`, uma confirmação interativa é exibida ao usuário (`[s]im / [N]ão / [y]olo / [c]ancelar`).
 5. **Auto-commit e Registro de Tokens:** As alterações são commitadas para suportar `/undo` e as estatísticas de tokens são atualizadas.
-

@@ -1,9 +1,16 @@
 """Tests for filesystem and terminal tools."""
+
 import pytest
-from pathlib import Path
-from src.tools.filesystem import ReadFileTool, WriteFileTool, ListDirTool, FindFilesTool, GrepSearchTool
-from src.tools.terminal import RunCommandTool
+
 from src.config import get_config
+from src.tools.filesystem import (
+    FindFilesTool,
+    GrepSearchTool,
+    ListDirTool,
+    ReadFileTool,
+    WriteFileTool,
+)
+from src.tools.terminal import RunCommandTool
 
 
 @pytest.mark.asyncio
@@ -69,3 +76,24 @@ async def test_run_command_safe_and_blocked():
     res_blocked = await cmd_tool.execute(command="rm -rf /")
     assert res_blocked.success is False
     assert "bloqueado por segurança" in res_blocked.output
+
+
+@pytest.mark.asyncio
+async def test_run_command_does_not_invoke_a_shell():
+    cmd_tool = RunCommandTool()
+    res = await cmd_tool.execute(command="echo 'ok; touch escaped.txt'")
+    assert res.success is True
+    assert "ok; touch escaped.txt" in res.output
+    assert not (get_config().project_root / "escaped.txt").exists()
+
+
+@pytest.mark.asyncio
+async def test_run_command_blocks_workspace_escape_and_dynamic_code():
+    cmd_tool = RunCommandTool()
+    escaped = await cmd_tool.execute(command="cat /etc/passwd")
+    assert escaped.success is False
+    assert "bloqueado por segurança" in escaped.output
+
+    dynamic_code = await cmd_tool.execute(command="python3 -c 'print(1)'")
+    assert dynamic_code.success is False
+    assert "bloqueado por segurança" in dynamic_code.output

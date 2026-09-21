@@ -24,7 +24,7 @@ class SessionExporter:
         tracked = list(self.session.file_tracker.tracked_files)
 
         lines = [
-            f"# 📄 Relatório de Sessão llmCli",
+            "# 📄 Relatório de Sessão llmCli",
             f"- **Data/Hora:** {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             f"- **Modelo Ativo:** `{self.config.active_model}`",
             f"- **Modo YOLO:** `{'Ativado' if self.config.yolo_mode else 'Desativado'}`",

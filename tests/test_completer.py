@@ -1,5 +1,6 @@
 """Tests for REPL autocomplete."""
 from prompt_toolkit.document import Document
+
 from src.ui.completer import CliCompleter
 
 

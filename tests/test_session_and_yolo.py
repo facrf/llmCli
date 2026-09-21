@@ -1,9 +1,7 @@
 """Tests for conversation sessions and YOLO mode handling."""
-import pytest
 from src.config import get_config
-from src.core.session import Session
 from src.context.file_tracker import FileTracker
-from src.core.agent import Agent
+from src.core.session import Session
 
 
 def test_session_message_flow():

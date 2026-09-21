@@ -1,6 +1,7 @@
 """Unit tests for web search and URL reader tools."""
 import pytest
-from src.tools.web_tools import WebSearchTool, ReadUrlTool
+
+from src.tools.web_tools import ReadUrlTool, WebSearchTool
 
 
 @pytest.mark.asyncio
@@ -9,7 +10,15 @@ async def test_read_url_tool_invalid():
     # URL inválida/inexistente deve tratar o erro graciosamente
     res = await tool.execute(url="http://invalid-non-existent-domain-12345.local")
     assert res.success is False
-    assert "Falha" in res.output or "Erro" in res.output
+    assert "Falha" in res.output or "Erro" in res.output or "bloqueado" in res.output
+
+
+@pytest.mark.asyncio
+async def test_read_url_tool_blocks_private_destinations():
+    tool = ReadUrlTool()
+    res = await tool.execute(url="http://127.0.0.1:8080/private")
+    assert res.success is False
+    assert "bloqueado" in res.output
 
 
 @pytest.mark.asyncio

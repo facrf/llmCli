@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Dict, Optional
+
 import yaml
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
@@ -51,7 +52,10 @@ class Config(BaseModel):
 
     @classmethod
     def load(cls, config_path: Optional[Path] = None) -> "Config":
-        path = config_path or (PROJECT_ROOT / "config.yaml")
+        configured_path = os.getenv("LLMCLI_CONFIG", "").strip()
+        path = config_path or (Path(configured_path) if configured_path else PROJECT_ROOT / "config.yaml")
+        if not path.is_absolute():
+            path = PROJECT_ROOT / path
         data: Dict[str, Any] = {}
         if path.exists():
             try:

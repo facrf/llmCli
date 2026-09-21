@@ -21,7 +21,7 @@
 - 🧠 **Busca Semântica & RAG Local (`/index` / `/search`):**
   - Indexação inteligente de classes, funções e blocos de código com pontuação BM25 e TF-IDF integrada, 100% offline e sem dependências externas pesadas.
 - 🔌 **Extensibilidade via Model Context Protocol (`/mcp`):**
-  - Conexão dinâmica com servidores MCP externos configurados em `mcp_servers.json` ou `~/.llmcli_mcp.json`.
+  - Conexão via stdio, descoberta de ferramentas e chamadas JSON-RPC para servidores configurados em `mcp_servers.json` ou `.mcp.json`.
 - 🌐 **Pesquisa Web & Leitura de URLs (`/web` / `read_url`):**
   - Consulta informações atualizadas, documentações de bibliotecas e soluções de erros na web via DuckDuckGo ou Tavily API.
 - 📋 **Checklist & Planejador de Tarefas (`/plan` / `/todo`):**
@@ -50,6 +50,9 @@ source .venv/bin/activate
 
 # Instalar dependências
 pip install -r requirements.txt
+
+# Ambiente de desenvolvimento: testes, cobertura e lint
+pip install -e '.[dev]'
 ```
 
 ### 2. Configurar Variáveis de Ambiente
@@ -157,6 +160,7 @@ Explore os guias detalhados na pasta [`docs/`](file:///storage/www/projetos/util
 - 🤖 [Provedores e Modelos de LLM](file:///storage/www/projetos/utils/llmCli/docs/models_and_providers.md): Configuração de llama.cpp, Ollama, LM Studio, vLLM e modelos de nuvem.
 - 📡 [Descoberta Automática de Modelos por IP](file:///storage/www/projetos/utils/llmCli/docs/network_discovery.md): Varredura assíncrona de rede e conexão com nós de inferência remotos.
 - 🛡️ [Ferramentas e Segurança](file:///storage/www/projetos/utils/llmCli/docs/tools_and_safety.md): Política de isolamento do workspace, catálogo de ferramentas e checkpoints Git.
+- 🔌 [Integração MCP](file:///storage/www/projetos/utils/llmCli/docs/mcp.md): Configuração, segurança e ciclo de vida de servidores MCP via stdio.
 - 🔧 [Diagnóstico e Resolução de Problemas](file:///storage/www/projetos/utils/llmCli/docs/troubleshooting.md): Perguntas frequentes e soluções para erros comuns.
 
 ---
@@ -178,4 +182,3 @@ Execute a suíte completa de testes automatizados com cobertura:
 ## 🔒 Diretrizes para Agentes de IA
 
 Consulte o arquivo [AGENTS.md](file:///storage/www/projetos/utils/llmCli/AGENTS.md) para detalhes sobre isolamento de diretório e integridade de arquivos.
-

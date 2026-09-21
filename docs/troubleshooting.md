@@ -72,10 +72,11 @@ Este guia reúne soluções práticas para os problemas e dúvidas mais comuns a
 
 ## ❓ 7. Servidores MCP Não Conectam ou Ferramentas Não Aparecem
 
-- **Causa:** O arquivo `mcp_servers.json` ou `~/.llmcli_mcp.json` contém sintaxe JSON inválida ou o comando/binário não está no `PATH`.
+- **Causa:** O arquivo `mcp_servers.json` ou `.mcp.json` contém sintaxe JSON inválida, o servidor está desabilitado ou o comando/binário não está no `PATH`.
 - **Solução:**
   1. Execute `/mcp` no REPL para inspecionar os servidores detectados.
-  2. Valide se os comandos definidos em `command` podem ser executados no terminal.
+  2. Valide se os comandos definidos em `command` podem ser executados no terminal e se o servidor implementa MCP via stdio.
+  3. Consulte o [guia MCP](mcp.md) para conferir o formato e o timeout configurados.
 
 ---
 
@@ -85,4 +86,3 @@ Para validar todas as ferramentas, adaptadores e isolamento de segurança:
 ```bash
 ./scripts/run_tests.sh
 ```
-

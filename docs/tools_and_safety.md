@@ -11,11 +11,11 @@ Em conformidade estrita com as diretrizes do [AGENTS.md](file:///storage/www/pro
 1. **Sandbox de Arquivos e Diretórios:**
    - Todas as ferramentas de leitura e escrita validam a árvore de caminhos. Tentativas de acessar diretórios fora da raiz do repositório (`/storage/www/projetos/utils/llmCli`) são bloqueadas imediatamente pelo resolvedor de caminhos seguros (`_resolve_safe_path`).
 2. **Execução Controlada de Comandos:**
-   - Comandos de shell são executados exclusivamente com `Cwd` apontado para a raiz do repositório.
-   - Padrões potencialmente destrutivos (como `rm -rf /` ou comandos globais perigosos) são bloqueados antes da execução.
+   - Não há interpretação por shell: pipes, redirecionamentos e encadeamentos são tratados como argumentos literais.
+   - Apenas executáveis comuns de desenvolvimento são aceitos; opções que executam código arbitrário ou apontam para fora do workspace são bloqueadas.
    - Todos os comandos possuem um tempo limite configurável (`command_timeout_seconds`, padrão 60s) para evitar travamentos infinitos.
 3. **Proteção de Segredos e Chaves:**
-   - Chaves de API e variáveis confidenciais são mantidas exclusivamente no arquivo `.env` (ignorado pelo `.gitignore`) e nunca salvas ou expostas no histórico de commits.
+   - Arquivos `.env`, chaves, credenciais e arquivos ignorados pelo Git não podem ser adicionados ao contexto da LLM.
 
 ---
 
@@ -62,12 +62,12 @@ O módulo [diff_applier.py](file:///storage/www/projetos/utils/llmCli/src/core/d
 ## ⏪ 4. Checkpoints Automáticos e o Comando `/undo`
 
 Antes de aplicar qualquer modificação de arquivo:
-1. O assistente cria automaticamente um commit de snapshot no Git com a mensagem `llmCli: patch em <arquivo>` ou `llmCli: write_file em <arquivo>`.
+1. Com a árvore Git limpa, o assistente cria um commit apenas para o arquivo alterado, com a mensagem `llmCli: patch em <arquivo>` ou `llmCli: write_file em <arquivo>`. Se houver trabalho preexistente, o checkpoint é ignorado para preservá-lo.
 2. Caso você queira reverter a alteração feita pela IA, basta digitar:
    ```bash
    /undo
    ```
-3. O `llmCli` reverterá o snapshot com segurança, restaurando seu código ao estado anterior.
+3. O `llmCli` usa `git revert`, sem `reset --hard` ou restauração ampla da árvore de trabalho.
 
 ---
 
@@ -75,4 +75,3 @@ Antes de aplicar qualquer modificação de arquivo:
 
 - **`/review`**: Analisa automaticamente as diferenças (`git diff`) pendentes no repositório, identificando potenciais bugs, regressões, riscos de segurança e oportunidades de refatoração.
 - **`/commit`**: Analisa o código modificado e propõe mensagens padronizadas no formato *Conventional Commits* (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`).
-

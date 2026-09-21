@@ -4,8 +4,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Iterable, List, Optional
+
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
+
 from src.config import get_config
 
 SLASH_COMMANDS = [

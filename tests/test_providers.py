@@ -1,12 +1,11 @@
 """Tests for provider registry and model resolvers."""
-import pytest
-from src.providers.registry import ProviderRegistry
+from src.providers.anthropic import AnthropicProvider
+from src.providers.base import ChatMessage
+from src.providers.gemini import GeminiProvider
 from src.providers.llamacpp import LlamaCppProvider
 from src.providers.ollama import OllamaProvider
-from src.providers.gemini import GeminiProvider
-from src.providers.anthropic import AnthropicProvider
 from src.providers.openai_compatible import OpenAICompatibleProvider
-from src.providers.base import ChatMessage
+from src.providers.registry import ProviderRegistry
 from src.tools.base import ToolDefinition
 
 

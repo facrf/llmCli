@@ -1,6 +1,7 @@
 """Tests for network host scanner and model auto-discovery."""
 import pytest
-from src.providers.scanner import HostScanner, DiscoveredService
+
+from src.providers.scanner import HostScanner
 
 
 def test_host_scanner_normalization():

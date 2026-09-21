@@ -52,7 +52,7 @@ O modo **YOLO** (*You Only Live Once* / Full Autonomous Access) foi desenvolvido
 | **`/architect`** | `/architect [modelo\|off]` | Alterna o Modo Arquiteto. Um modelo planeja a arquitetura da solução e outro aplica as alterações no código. |
 | **`/scan`** | `/scan <ip_ou_host>` | Escaneia portas de servidores de LLM em um IP e lista os modelos disponíveis. |
 | **`/host`** | `/host <ip_ou_host>` | Conecta ao IP remoto, atualiza os endpoints locais e seleciona o modelo disponível. |
-| **`/mcp`** | `/mcp` | Lista os servidores MCP configurados e as ferramentas dinâmicas ativas. |
+| **`/mcp`** | `/mcp` | Conecta servidores MCP via stdio, descobre e lista ferramentas dinâmicas ativas. |
 | **`/lang`** | `/lang [codigo]` | Exibe ou altera o idioma (`pt`, `en`, `es`, `de`, `fr`, `zh`, `ru`, `hi`, `auto`). |
 
 ---
@@ -117,4 +117,3 @@ O modo **YOLO** (*You Only Live Once* / Full Autonomous Access) foi desenvolvido
 - **`Ctrl + C`**: Cancela o prompt atual ou interrompe a geração em andamento.
 - **`Ctrl + D`**: Encerra a aplicação de forma limpa.
 - **Setas `Cima` / `Baixo`**: Navega pelo histórico de prompts digitados (persistido em `~/.llmcli_history`).
-

@@ -1,7 +1,7 @@
 """Tests for all interactive slash commands."""
 import pytest
+
 from src.core.agent import Agent
-from src.core.session import Session
 from src.ui.repl import ReplSession
 
 

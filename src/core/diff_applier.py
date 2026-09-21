@@ -5,8 +5,8 @@ import difflib
 import json
 import re
 from dataclasses import dataclass
-from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
+
 from src.config import get_config
 
 
@@ -114,18 +114,18 @@ def fuzzy_find_and_replace(original_text: str, search: str, replace: str) -> Tup
         return True, original_text.replace(search, replace, 1)
 
     def strip_trailing_lines(t: str) -> str:
-        return "\n".join(l.rstrip() for l in t.splitlines())
+        return "\n".join(line.rstrip() for line in t.splitlines())
 
     stripped_orig = strip_trailing_lines(original_text)
     stripped_search = strip_trailing_lines(search)
 
     if stripped_search in stripped_orig:
         orig_lines = original_text.splitlines(keepends=True)
-        search_lines = [l.rstrip() for l in search.splitlines()]
+        search_lines = [line.rstrip() for line in search.splitlines()]
         search_len = len(search_lines)
 
         for i in range(len(orig_lines) - search_len + 1):
-            chunk = [l.rstrip() for l in orig_lines[i:i + search_len]]
+            chunk = [line.rstrip() for line in orig_lines[i:i + search_len]]
             if chunk == search_lines:
                 before = "".join(orig_lines[:i])
                 after = "".join(orig_lines[i + search_len:])
@@ -142,7 +142,11 @@ def fuzzy_find_and_replace(original_text: str, search: str, replace: str) -> Tup
 
     for i in range(len(orig_lines) - search_len + 1):
         window = orig_lines[i:i + search_len]
-        ratio = difflib.SequenceMatcher(None, [l.strip() for l in window], [l.strip() for l in search_lines]).ratio()
+        ratio = difflib.SequenceMatcher(
+            None,
+            [line.strip() for line in window],
+            [line.strip() for line in search_lines],
+        ).ratio()
         if ratio > best_ratio and ratio > 0.85:
             best_ratio = ratio
             best_idx = i

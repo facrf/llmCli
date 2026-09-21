@@ -36,6 +36,12 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+Para desenvolvimento e execução da suíte com cobertura, prefira:
+
+```bash
+pip install -e '.[dev]'
+```
+
 ---
 
 ## 🔑 2. Configuração de Credenciais e Endpoints
@@ -72,6 +78,8 @@ ARCHITECT_MODEL=gemini/gemini-2.5-pro
 LLMCLI_LANG=pt-BR
 YOLO_MODE=false
 ```
+
+Configurações locais não secretas podem ficar em `config.local.yaml` (ignorado pelo Git). Comece com `config.example.yaml` e selecione outro arquivo com `LLMCLI_CONFIG=config.local.yaml`.
 
 ---
 
@@ -131,4 +139,3 @@ Com carregamento de arquivos específicos e modelo customizado:
 - [Arquitetura do Sistema](file:///storage/www/projetos/utils/llmCli/docs/architecture.md): Estrutura de classes, agentes e subsistemas.
 - [Ferramentas e Segurança](file:///storage/www/projetos/utils/llmCli/docs/tools_and_safety.md): Sandbox e checkpoints Git.
 - [Diagnóstico e Resolução de Problemas](file:///storage/www/projetos/utils/llmCli/docs/troubleshooting.md): Guia de resolução de problemas comuns.
-

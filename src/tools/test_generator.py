@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Any
-from src.config import PROJECT_ROOT, get_config
+from typing import Optional
+
+from src.config import PROJECT_ROOT
 
 
 def get_test_prompt_for_file(target_file: Path, project_root: Optional[Path] = None) -> str:

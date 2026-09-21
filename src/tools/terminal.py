@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import asyncio
 import os
+import shlex
+from pathlib import Path
 from typing import Any, Optional
+
 from src.config import get_config
 from src.tools.base import BaseTool, ToolResult
 
@@ -20,18 +23,52 @@ class RunCommandTool(BaseTool):
         "required": ["command"]
     }
 
+    # Commands are intentionally limited to common project-development tools.  This
+    # is not a replacement for an OS sandbox, but avoids giving an LLM a general
+    # purpose shell with access to the user's machine.
+    SAFE_EXECUTABLES = {
+        "cargo", "cat", "echo", "find", "git", "go", "head", "java", "ls",
+        "make", "mypy", "node", "npm", "npx", "php", "pytest", "python",
+        "python3", "rg", "ruff", "sed", "tail",
+    }
+    FORBIDDEN_ARGUMENTS = {"-c", "--command", "--global", "--prefix", "--work-tree", "--git-dir"}
+
+    def _parse_safe_command(self, command: str) -> tuple[Optional[list[str]], Optional[str]]:
+        try:
+            args = shlex.split(command, posix=True)
+        except ValueError as err:
+            return None, f"Comando inválido: {err}"
+
+        if not args:
+            return None, "Comando vazio."
+        if args[0] not in self.SAFE_EXECUTABLES:
+            return None, f"Executável não permitido: {args[0]}."
+        if any(arg in self.FORBIDDEN_ARGUMENTS for arg in args[1:]):
+            return None, "Argumento não permitido por segurança."
+
+        root = get_config().project_root.resolve()
+        for arg in args[1:]:
+            # Reject paths that can escape the workspace. Absolute paths within it
+            # remain valid, which is useful for tools that require an explicit path.
+            if arg.startswith("/"):
+                try:
+                    Path(arg).resolve().relative_to(root)
+                except ValueError:
+                    return None, f"Caminho fora do workspace não permitido: {arg}"
+            elif arg == ".." or arg.startswith("../") or "/../" in arg:
+                return None, f"Caminho que sai do workspace não permitido: {arg}"
+        return args, None
+
     async def execute(self, command: str, timeout_seconds: Optional[int] = None, **kwargs: Any) -> ToolResult:
         config = get_config()
         timeout = timeout_seconds or config.security.command_timeout_seconds
-
-        # Proibir comandos claramente perigosos se não for intencional
-        cmd_stripped = command.strip()
-        if cmd_stripped.startswith("rm -rf /") or cmd_stripped.startswith("mkfs") or ":(){ :|:& };:" in cmd_stripped:
-            return ToolResult(tool_call_id="", name=self.name, success=False, output="Comando bloqueado por segurança (risco crítico ao sistema).")
+        args, error = self._parse_safe_command(command)
+        if error:
+            return ToolResult(tool_call_id="", name=self.name, success=False, output=f"Comando bloqueado por segurança: {error}")
 
         try:
-            process = await asyncio.create_subprocess_shell(
-                command,
+            process = await asyncio.create_subprocess_exec(
+                *args,
                 cwd=str(config.project_root),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,

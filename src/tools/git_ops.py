@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import Optional, Tuple
-from src.config import get_config
+from pathlib import Path
+from typing import Iterable, Optional, Tuple
 
+from src.config import get_config
 
 
 async def run_git_cmd(*args: str) -> Tuple[int, str, str]:
@@ -51,8 +52,16 @@ async def get_git_status() -> str:
     return out or "(Árvore de trabalho limpa)"
 
 
-async def create_checkpoint_commit(message: str) -> Optional[str]:
-    """Cria um commit automático como ponto de restauração."""
+async def is_worktree_clean() -> bool:
+    """True only when no user changes would be captured by an automatic commit."""
+    if not await is_git_repo():
+        return False
+    code, out, _ = await run_git_cmd("status", "--porcelain")
+    return code == 0 and not out.strip()
+
+
+async def create_checkpoint_commit(message: str, paths: Iterable[str | Path]) -> Optional[str]:
+    """Commit only agent-modified paths; never stage the whole working tree."""
     if "PYTEST_CURRENT_TEST" in os.environ:
         return None
 
@@ -61,8 +70,12 @@ async def create_checkpoint_commit(message: str) -> Optional[str]:
         return None
 
 
-    # Adicionar modificações
-    await run_git_cmd("add", "-A")
+    relative_paths = [str(path) for path in paths]
+    if not relative_paths:
+        return None
+    code, _, _ = await run_git_cmd("add", "--", *relative_paths)
+    if code != 0:
+        return None
     full_msg = f"{config.git.commit_prefix} {message}"
     code, out, _ = await run_git_cmd("commit", "-m", full_msg)
     if code == 0:
@@ -73,7 +86,7 @@ async def create_checkpoint_commit(message: str) -> Optional[str]:
 
 
 async def undo_last_checkpoint() -> Tuple[bool, str]:
-    """Desfaz o último commit ou reverte modificações não salvas."""
+    """Revert the last automatic checkpoint without discarding user changes."""
     if not await is_git_repo():
         return False, "Git não está configurado neste diretório."
 
@@ -81,16 +94,12 @@ async def undo_last_checkpoint() -> Tuple[bool, str]:
     config = get_config()
     code, last_msg, _ = await run_git_cmd("log", "-1", "--pretty=%B")
     if code == 0 and config.git.commit_prefix in last_msg:
-        code_reset, _, err = await run_git_cmd("reset", "--hard", "HEAD~1")
-        if code_reset == 0:
-            return True, f"Última alteração desfeita com sucesso (Commit revertido: {last_msg.strip()})."
-        return False, f"Falha ao reverter commit: {err}"
+        code_revert, _, err = await run_git_cmd("revert", "--no-edit", "HEAD")
+        if code_revert == 0:
+            return True, f"Última alteração desfeita com segurança (revertido: {last_msg.strip()})."
+        return False, f"Falha ao reverter checkpoint sem descartar alterações: {err}"
 
-    # Se não houver commit do llmCli, tenta restaurar arquivos modificados na working tree
-    code_restore, _, err = await run_git_cmd("restore", ".")
-    if code_restore == 0:
-        return True, "Modificações não commitadas foram revertidas com sucesso."
-    return False, f"Não foi possível reverter: {err}"
+    return False, "O último commit não é um checkpoint do llmCli; nenhuma alteração foi descartada."
 
 
 async def get_raw_git_diff() -> str:

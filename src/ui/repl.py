@@ -2,12 +2,16 @@
 from __future__ import annotations
 
 import asyncio
-import os
 from pathlib import Path
+
 from prompt_toolkit import PromptSession
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.history import FileHistory, InMemoryHistory
 from prompt_toolkit.styles import Style
+from rich.panel import Panel
+from rich.syntax import Syntax
+from rich.table import Table
+
 from src.config import get_config, get_preferences
 from src.core.agent import Agent
 from src.core.exporter import SessionExporter
@@ -15,13 +19,21 @@ from src.core.todo_manager import TodoManager
 from src.i18n import SUPPORTED_LANGUAGES, get_active_language, set_active_language, t
 from src.providers.registry import ProviderRegistry
 from src.providers.scanner import HostScanner
-from src.tools.git_ops import create_user_commit, get_git_diff, get_raw_git_diff, undo_last_checkpoint
+from src.tools.git_ops import (
+    create_user_commit,
+    get_git_diff,
+    get_raw_git_diff,
+    undo_last_checkpoint,
+)
 from src.ui.completer import CliCompleter, resolve_slash_command
-from src.ui.console import ask_user_confirmation, console, print_banner, print_diff, print_scan_results, print_status_table
-from rich.panel import Panel
-from rich.syntax import Syntax
-from rich.table import Table
-
+from src.ui.console import (
+    ask_user_confirmation,
+    console,
+    print_banner,
+    print_diff,
+    print_scan_results,
+    print_status_table,
+)
 
 prompt_style = Style.from_dict({
     "prompt.name": "ansicyan bold",
@@ -265,7 +277,11 @@ class ReplSession:
                     )
                     proposed_msg = (await self.agent.run_prompt(prompt)).strip()
                     if proposed_msg.startswith("```"):
-                        lines = [l for l in proposed_msg.splitlines() if not l.startswith("```")]
+                        lines = [
+                            line
+                            for line in proposed_msg.splitlines()
+                            if not line.startswith("```")
+                        ]
                         proposed_msg = lines[0] if lines else proposed_msg
                     proposed_msg = proposed_msg.strip("`'\"\n ")
                     console.print(f"\n[bold green]Mensagem sugerida:[/bold green] [bold yellow]{proposed_msg}[/bold yellow]")
@@ -522,11 +538,14 @@ class ReplSession:
             if not servers:
                 console.print("[dim]Nenhum servidor MCP configurado. Crie um arquivo [bold]mcp_servers.json[/bold] ou [bold]~/.llmcli_mcp.json[/bold].[/dim]")
             else:
+                errors = await self.agent.refresh_mcp_tools()
                 console.print(f"[bold cyan]Servidores MCP Configurados ({len(servers)}):[/bold cyan]")
                 for s_name, s_cfg in servers.items():
                     console.print(f"  🔌 [bold yellow]{s_name}[/bold yellow]: comando='{s_cfg.command}' args={s_cfg.args}")
                 mcp_tools = [k for k in self.agent.tools if k.startswith("mcp_")]
                 console.print(f"[dim]Ferramentas MCP dinâmicas ativas: {len(mcp_tools)}[/dim]")
+                for error in errors:
+                    console.print(f"[yellow]MCP indisponível: {error}[/yellow]")
 
         elif command == "/tokens":
             tokens = self.agent.session.estimate_tokens()

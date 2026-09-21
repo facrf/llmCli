@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 from typing import List, Optional
+
 from src.config import get_config
 from src.context.file_tracker import FileTracker
 from src.context.repomap import build_repo_map
 from src.i18n import t
 from src.providers.base import ChatMessage
-
 
 SYSTEM_PROMPT_TEMPLATE = """Você é o assistente oficial de desenvolvimento llmCli, operando diretamente no terminal do desenvolvedor.
 Você ajuda a criar, refatorar, depurar e manter código neste projeto com máxima precisão e autonomia.

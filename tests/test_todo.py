@@ -1,5 +1,4 @@
 """Unit tests for TODO task planner and checklist."""
-import pytest
 from src.core.todo_manager import TodoManager
 
 

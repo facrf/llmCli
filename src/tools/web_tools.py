@@ -1,10 +1,13 @@
 """Web search and URL content reader tools for llmCli."""
 from __future__ import annotations
 
+import ipaddress
 import os
 import re
+import socket
 import urllib.parse
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
+
 import httpx
 
 from src.tools.base import BaseTool, ToolResult
@@ -88,6 +91,8 @@ class WebSearchTool(BaseTool):
 class ReadUrlTool(BaseTool):
     """Ferramenta para extrair o conteúdo de páginas e documentações web."""
     name = "read_url"
+    MAX_RESPONSE_BYTES = 1_000_000
+    MAX_REDIRECTS = 3
     description = "Lê e extrai o conteúdo de texto legível a partir de uma URL da web (ex: documentações, artigos, repositórios)."
     parameters_schema = {
         "type": "object",
@@ -108,17 +113,64 @@ class ReadUrlTool(BaseTool):
     def parameters(self) -> Dict[str, Any]:
         return self.parameters_schema
 
+    @staticmethod
+    def _is_public_host(hostname: str) -> bool:
+        if hostname.lower() in {"localhost", "localhost.localdomain"}:
+            return False
+        try:
+            addresses = {entry[4][0] for entry in socket.getaddrinfo(hostname, None)}
+        except socket.gaierror:
+            return False
+        for address in addresses:
+            ip = ipaddress.ip_address(address)
+            if not ip.is_global:
+                return False
+        return bool(addresses)
+
+    def _validate_url(self, url: str) -> Optional[str]:
+        parsed = urllib.parse.urlsplit(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            return "Apenas URLs HTTP/HTTPS públicas são permitidas."
+        if parsed.username or parsed.password:
+            return "URLs com credenciais não são permitidas."
+        if not self._is_public_host(parsed.hostname):
+            return "Destino local, privado ou não resolvível bloqueado por segurança."
+        return None
+
     async def execute(self, url: str, max_chars: int = 6000) -> ToolResult:
+        validation_error = self._validate_url(url)
+        if validation_error:
+            return ToolResult(tool_call_id="", name=self.name, success=False, output=validation_error)
         try:
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             }
-            async with httpx.AsyncClient(timeout=12.0, follow_redirects=True) as client:
-                resp = await client.get(url, headers=headers)
+            current_url = url
+            async with httpx.AsyncClient(timeout=12.0, follow_redirects=False) as client:
+                for _ in range(self.MAX_REDIRECTS + 1):
+                    resp = await client.get(current_url, headers=headers)
+                    if resp.is_redirect:
+                        location = resp.headers.get("location")
+                        if not location:
+                            return ToolResult(tool_call_id="", name=self.name, success=False, output="Redirect sem destino.")
+                        current_url = urllib.parse.urljoin(current_url, location)
+                        validation_error = self._validate_url(current_url)
+                        if validation_error:
+                            return ToolResult(tool_call_id="", name=self.name, success=False, output=validation_error)
+                        continue
+                    break
+                else:
+                    return ToolResult(tool_call_id="", name=self.name, success=False, output="Limite de redirects excedido.")
                 if resp.status_code != 200:
                     return ToolResult(tool_call_id="", name=self.name, success=False, output=f"Erro HTTP {resp.status_code} ao acessar {url}")
 
-                html = resp.text
+                content_type = resp.headers.get("content-type", "").lower()
+                if "text/" not in content_type and "json" not in content_type and "xml" not in content_type:
+                    return ToolResult(tool_call_id="", name=self.name, success=False, output="Tipo de conteúdo não textual bloqueado.")
+                if int(resp.headers.get("content-length", "0") or 0) > self.MAX_RESPONSE_BYTES:
+                    return ToolResult(tool_call_id="", name=self.name, success=False, output="Resposta excede o limite de tamanho permitido.")
+
+                html = resp.content[:self.MAX_RESPONSE_BYTES].decode(resp.encoding or "utf-8", errors="replace")
                 # Remover scripts, estilos e tags HTML
                 clean = re.sub(r"<(script|style)[^>]*>.*?</\1>", "", html, flags=re.DOTALL | re.IGNORECASE)
                 clean = re.sub(r"<[^>]+>", " ", clean)

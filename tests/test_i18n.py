@@ -1,15 +1,15 @@
 """Unit tests for multi-language i18n support, language switching, aliases, and translations."""
 import pytest
+
+from src.core.agent import Agent
 from src.i18n import (
     SUPPORTED_LANGUAGES,
     TRANSLATIONS,
-    detect_system_language,
     get_active_language,
     resolve_language_code,
     set_active_language,
-    t
+    t,
 )
-from src.core.agent import Agent
 from src.ui.repl import ReplSession
 
 

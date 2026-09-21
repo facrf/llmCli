@@ -1,23 +1,37 @@
 """Main autonomous agent loop with hybrid function calling and search/replace support."""
 from __future__ import annotations
 
-import asyncio
-from typing import Any, Callable, Dict, List, Optional
-from rich.console import Console
-from src.config import get_config, get_preferences
-from src.core.diff_applier import apply_search_replace_block, extract_search_replace_blocks, extract_json_tool_calls
+from typing import Any, Dict, List, Optional
 
+from src.config import get_config, get_preferences
+from src.context.semantic_indexer import SemanticIndexer, SemanticSearchTool
+from src.core.diff_applier import (
+    apply_search_replace_block,
+    extract_json_tool_calls,
+    extract_search_replace_blocks,
+)
 from src.core.session import Session
-from src.providers.base import LLMProvider, StreamChunk
+from src.providers.base import LLMProvider
 from src.providers.registry import ProviderRegistry
 from src.tools.base import BaseTool, ToolCall, ToolDefinition, ToolResult
-from src.tools.filesystem import FindFilesTool, GrepSearchTool, ListDirTool, ReadFileTool, WriteFileTool
-from src.context.semantic_indexer import SemanticIndexer, SemanticSearchTool
-from src.tools.git_ops import create_checkpoint_commit
+from src.tools.filesystem import (
+    FindFilesTool,
+    GrepSearchTool,
+    ListDirTool,
+    ReadFileTool,
+    WriteFileTool,
+)
+from src.tools.git_ops import create_checkpoint_commit, is_worktree_clean
 from src.tools.mcp_client import McpManager
 from src.tools.terminal import RunCommandTool
 from src.tools.web_tools import ReadUrlTool, WebSearchTool
-from src.ui.console import ask_user_confirmation, console, print_diff, print_tool_execution, print_tool_result
+from src.ui.console import (
+    ask_user_confirmation,
+    console,
+    print_diff,
+    print_tool_execution,
+    print_tool_result,
+)
 
 
 class Agent:
@@ -53,6 +67,12 @@ class Agent:
     def get_tool_definitions(self) -> List[ToolDefinition]:
         return [tool.get_definition() for tool in self.tools.values()]
 
+    async def refresh_mcp_tools(self) -> List[str]:
+        """Connect configured MCP servers and expose their current tools."""
+        errors = await self.mcp_manager.discover_tools()
+        self.mcp_manager.register_tools_to_agent(self)
+        return errors
+
     async def execute_tool_with_permission(self, tool_name: str, kwargs: Dict[str, Any], tool_call_id: str = "") -> ToolResult:
         tool = self.tools.get(tool_name)
         if not tool:
@@ -72,13 +92,21 @@ class Agent:
                 self.config.yolo_mode = True
                 console.print("[bold red]⚡ Modo YOLO ativado para esta sessão![/bold red]")
 
+        checkpoint_allowed = tool_name == "write_file" and await is_worktree_clean()
+        if tool_name == "write_file" and not checkpoint_allowed:
+            console.print("[yellow]Checkpoint automático ignorado: há alterações preexistentes no Git.[/yellow]")
+
         print_tool_execution(tool_name, args_str, is_yolo=self.config.yolo_mode)
         result = await tool.execute(**kwargs)
         result.tool_call_id = tool_call_id
 
         # Se modificou arquivo, criar checkpoint de git
         if tool_name == "write_file" and result.success:
-            commit_hash = await create_checkpoint_commit(f"write_file em {kwargs.get('path')}")
+            commit_hash = None
+            if checkpoint_allowed:
+                commit_hash = await create_checkpoint_commit(
+                    f"write_file em {kwargs.get('path')}", [str(kwargs.get("path", ""))]
+                )
             if commit_hash:
                 result.output += f"\n[Git Checkpoint: {commit_hash}]"
 
@@ -106,6 +134,7 @@ class Agent:
 
     async def run_prompt(self, user_prompt: str, max_iterations: int = 8) -> str:
         """Executa um prompt do usuário através do loop de raciocínio e execução de ferramentas."""
+        await self.refresh_mcp_tools()
         if self.config.architect_mode:
             return await self._run_architect_pipeline(user_prompt, max_iterations)
 
@@ -165,9 +194,7 @@ class Agent:
             search_replace_blocks = extract_search_replace_blocks(stream_text)
 
             # Executar blocos de modificação se houver
-            sr_applied = False
             for block in search_replace_blocks:
-                sr_applied = True
                 if not self.config.yolo_mode:
                     choice = ask_user_confirmation(f"Aplicar modificação no arquivo '{block.file_path}'?")
                     if choice == "abort":
@@ -178,13 +205,16 @@ class Agent:
                     elif choice == "no":
                         continue
 
+                checkpoint_allowed = await is_worktree_clean()
+                if not checkpoint_allowed:
+                    console.print("[yellow]Checkpoint automático ignorado: há alterações preexistentes no Git.[/yellow]")
                 ok, msg, diff = apply_search_replace_block(block)
                 if diff:
                     print_diff(diff, block.file_path)
                 print_tool_result("diff_applier", ok, msg)
 
-                if ok:
-                    await create_checkpoint_commit(f"patch em {block.file_path}")
+                if ok and checkpoint_allowed:
+                    await create_checkpoint_commit(f"patch em {block.file_path}", [block.file_path])
 
             # 2. Extrair e mesclar tool calls de blocos JSON no texto (modelos locais sem native tool calling)
             if not collected_tool_calls:
@@ -332,12 +362,15 @@ class Agent:
                     elif choice == "no":
                         continue
 
+                checkpoint_allowed = await is_worktree_clean()
+                if not checkpoint_allowed:
+                    console.print("[yellow]Checkpoint automático ignorado: há alterações preexistentes no Git.[/yellow]")
                 ok, msg, diff = apply_search_replace_block(block)
                 if diff:
                     print_diff(diff, block.file_path)
                 print_tool_result("diff_applier", ok, msg)
-                if ok:
-                    await create_checkpoint_commit(f"patch em {block.file_path}")
+                if ok and checkpoint_allowed:
+                    await create_checkpoint_commit(f"patch em {block.file_path}", [block.file_path])
 
             if not collected_tool_calls:
                 parsed_json_calls = extract_json_tool_calls(stream_text)
@@ -363,4 +396,3 @@ class Agent:
             break
 
         return final_assistant_text
-

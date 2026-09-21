@@ -1,6 +1,6 @@
 """Tests for FileTracker and context building."""
-from src.context.file_tracker import FileTracker
 from src.config import get_config
+from src.context.file_tracker import FileTracker
 
 
 def test_file_tracker_single_file():
@@ -32,3 +32,17 @@ def test_file_tracker_security_boundary():
     ok, msg = tracker.add_file("/etc/passwd")
     assert ok is False
     assert "fora do workspace" in msg
+
+
+def test_file_tracker_does_not_add_secret_files():
+    config = get_config()
+    secret_file = config.project_root / "tests" / ".env"
+    secret_file.write_text("API_KEY=never-send-this", encoding="utf-8")
+    try:
+        tracker = FileTracker()
+        ok, message = tracker.add_file("tests/.env")
+        assert ok is False
+        assert "protegido" in message
+        assert "never-send-this" not in tracker.get_context_text()
+    finally:
+        secret_file.unlink(missing_ok=True)

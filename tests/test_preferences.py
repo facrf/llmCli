@@ -1,6 +1,6 @@
 """Unit tests for global and per-model user preferences persistence."""
-import pytest
 from pathlib import Path
+
 from src.config import Config, UserPreferences
 
 

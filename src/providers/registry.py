@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
+
 from src.config import get_config
 from src.providers.anthropic import AnthropicProvider
 from src.providers.base import LLMProvider

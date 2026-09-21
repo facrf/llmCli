@@ -22,7 +22,7 @@ async def main():
     online_locals = [s for s in status_list if "Local" in s["provider"] and s["status"] == "ONLINE"]
     configured_cloud = [s for s in status_list if "Nuvem" in s["provider"] and s["status"] == "CONFIGURADO"]
     
-    console.print(f"\n[bold]Resumo:[/bold]")
+    console.print("\n[bold]Resumo:[/bold]")
     console.print(f"  • Provedores locais online: [bold green]{len(online_locals)}[/bold green]")
     console.print(f"  • Provedores na nuvem configurados: [bold green]{len(configured_cloud)}[/bold green]")
     

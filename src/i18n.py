@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import locale
 import os
-from typing import Dict, Any, Optional
+from typing import Any, Dict
 
 SUPPORTED_LANGUAGES = {
     "pt-BR": {"name": "Português (Brasil)", "flag": "🇧🇷"},
