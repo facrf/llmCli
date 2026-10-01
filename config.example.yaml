@@ -25,8 +25,8 @@ multi_agent:
   enabled: false
   max_parallel_agents: 1
   roles:
-    researcher: { model: "" }
-    architect: { model: "gemini/gemini-2.5-pro" }
-    implementer: { model: "" }
-    tester: { model: "" }
-    reviewer: { model: "" }
+    researcher: { model: "", max_iterations: 4, timeout_seconds: 120 }
+    architect: { model: "gemini/gemini-2.5-pro", max_iterations: 4, timeout_seconds: 120 }
+    implementer: { model: "", max_iterations: 4, timeout_seconds: 120 }
+    tester: { model: "", max_iterations: 4, timeout_seconds: 120 }
+    reviewer: { model: "", max_iterations: 4, timeout_seconds: 120 }

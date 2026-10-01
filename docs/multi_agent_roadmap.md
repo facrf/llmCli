@@ -55,7 +55,7 @@ Implementado nesta etapa:
 
 Limitações desta etapa:
 
-- a configuração por papel não possui ainda orçamento individual de tokens, custo ou timeout;
+- a configuração por papel possui modelo, máximo de iterações e timeout; orçamento de tokens e custo ainda não existem;
 - o testador interpreta e pode disparar apenas a suíte completa; não há seleção de testes nem auto-correção restrita;
 - não existe reconciliação de worktrees, execução paralela ou painel de progresso;
 - `affected_files`, evidências estruturadas e próxima ação ainda são campos previstos, mas não são extraídos automaticamente;
@@ -93,7 +93,7 @@ multi_agent:
     reviewer: { model: "gemini/gemini-2.5-flash" }
 ```
 
-`multi_agent.roles` e `/agents` já existem. Falta incluir status em tempo real, consumo estimado, orçamento individual de rodadas/tokens e timeout por papel.
+`multi_agent.roles`, limites de iterações/timeout e `/agents` já existem. Falta incluir status em tempo real, consumo estimado e orçamento de tokens/custo por papel.
 
 ### Fase 3 — Paralelismo seguro (não iniciada)
 

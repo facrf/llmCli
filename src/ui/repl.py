@@ -143,7 +143,11 @@ class ReplSession:
             enabled = "ativo" if self.config.multi_agent.enabled else "desativado"
             console.print(f"[bold cyan]Modo multiagente: {enabled}[/bold cyan]")
             for role, model in self.multi_agent.status().items():
-                console.print(f"  • [yellow]{role}[/yellow]: {model}")
+                iterations, timeout = self.multi_agent.role_limits(role)
+                console.print(
+                    f"  • [yellow]{role}[/yellow]: {model} "
+                    f"([dim]{iterations} iterações, {timeout}s[/dim])"
+                )
 
         elif command == "/team":
             if not self.config.multi_agent.enabled:

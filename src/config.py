@@ -34,11 +34,13 @@ class SecurityConfig(BaseModel):
 
 class MultiAgentRoleConfig(BaseModel):
     model: str = ""
+    max_iterations: int = Field(default=4, ge=1, le=8)
+    timeout_seconds: int = Field(default=120, ge=5, le=600)
 
 
 class MultiAgentConfig(BaseModel):
     enabled: bool = False
-    max_parallel_agents: int = 1
+    max_parallel_agents: int = Field(default=1, ge=1, le=1)
     roles: Dict[str, MultiAgentRoleConfig] = Field(default_factory=dict)
 
 

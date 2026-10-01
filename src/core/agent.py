@@ -81,6 +81,8 @@ class Agent:
     async def run_role_prompt(self, role: str, prompt: str, model_name: Optional[str] = None) -> str:
         """Run a specialized role with an isolated session and read-only tools."""
         provider = ProviderRegistry.create_provider(model_name or self.config.active_model)
+        role_config = self.config.multi_agent.roles.get(role)
+        max_iterations = role_config.max_iterations if role_config else 4
         role_session = Session(file_tracker=self.session.file_tracker)
         role_session.add_user_message(
             f"Você atua como {role}. {prompt}\n\nResponda com evidências objetivas. "
@@ -97,7 +99,7 @@ class Agent:
         ]
         last_output = ""
 
-        for _ in range(4):
+        for _ in range(max_iterations):
             output = ""
             tool_calls: List[ToolCall] = []
             async for chunk in provider.chat_stream(

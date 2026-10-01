@@ -1,4 +1,6 @@
 """Tests for the sequential multi-agent coordinator."""
+import asyncio
+
 import pytest
 
 from src.core.multi_agent import MultiAgentCoordinator
@@ -69,3 +71,20 @@ async def test_role_failure_is_recorded_without_aborting_pipeline():
     assert "provider unavailable" in run.reports[0].summary
     assert run.reports[1].role == "architect"
     assert run.reports[1].status == "complete"
+
+
+@pytest.mark.asyncio
+async def test_role_timeout_is_recorded_without_aborting_pipeline():
+    agent = FakeAgent()
+
+    async def delayed_runner(role, prompt, model):
+        if role == "researcher":
+            await asyncio.sleep(0.01)
+        return f"{role}:ok"
+
+    coordinator = MultiAgentCoordinator(agent, role_runner=delayed_runner)
+    coordinator.role_limits = lambda role: (4, 0.001)
+    run = await coordinator.run("Analisar timeout")
+
+    assert run.reports[0].status == "failed"
+    assert "limite de tempo" in run.reports[0].summary

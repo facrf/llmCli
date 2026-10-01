@@ -1,6 +1,7 @@
 """Sequential, supervised coordinator for specialized llmCli agents."""
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Awaitable, Callable, Dict, List, Optional
 
@@ -41,6 +42,12 @@ class MultiAgentCoordinator:
     def role_model(self, role: str) -> Optional[str]:
         role_config = self.agent.config.multi_agent.roles.get(role)
         return role_config.model if role_config and role_config.model else None
+
+    def role_limits(self, role: str) -> tuple[int, int]:
+        role_config = self.agent.config.multi_agent.roles.get(role)
+        if role_config is None:
+            return 4, 120
+        return role_config.max_iterations, role_config.timeout_seconds
 
     async def _run_read_only_role(self, role: str, prompt: str, model: Optional[str]) -> str:
         return await self.agent.run_role_prompt(role, prompt, model)
@@ -89,8 +96,13 @@ class MultiAgentCoordinator:
 
     async def _delegate(self, role: str, prompt: str, model: Optional[str]) -> AgentReport:
         try:
-            summary = await self._role_runner(role, prompt, model)
+            _, timeout_seconds = self.role_limits(role)
+            summary = await asyncio.wait_for(
+                self._role_runner(role, prompt, model), timeout=timeout_seconds
+            )
             return AgentReport(role, "complete", summary)
+        except asyncio.TimeoutError:
+            return AgentReport(role, "failed", f"Agente {role} excedeu o limite de tempo.")
         except Exception as exc:
             return AgentReport(role, "failed", f"Falha do agente {role}: {exc}")
 
