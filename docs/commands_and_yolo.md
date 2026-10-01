@@ -15,6 +15,7 @@ O modo **YOLO** (*You Only Live Once* / Full Autonomous Access) foi desenvolvido
 | **Leitura de arquivos e buscas** | Automática | Automática |
 | **Edição e gravação de arquivos** | Pede confirmação (`[s]im / [N]ão / [y]olo / [c]ancelar`) | **Executa automaticamente** |
 | **Comandos de terminal (`run_command`)** | Pede confirmação prévia | **Executa automaticamente** |
+| **Ferramentas MCP e execução de testes pelo agente** | Pede confirmação prévia | **Executa automaticamente** |
 | **Git Checkpoints de Segurança** | Cria snapshot antes de cada alteração | **Cria snapshot antes de cada alteração** |
 | **Reversão com `/undo`** | Totalmente disponível | **Totalmente disponível** |
 | **Persistência** | Salvo por modelo e globalmente | **Salvo por modelo e globalmente** |

@@ -107,7 +107,7 @@ class Agent:
                 max_tokens=self.config.max_tokens,
             ):
                 if chunk.error:
-                    return f"Falha do agente {role}: {chunk.error}"
+                    raise RuntimeError(f"Falha do agente {role}: {chunk.error}")
                 output += chunk.delta_content
                 if chunk.tool_calls:
                     tool_calls.extend(chunk.tool_calls)
@@ -138,8 +138,9 @@ class Agent:
 
         args_str = ", ".join(f"{k}={repr(v)[:50]}" for k, v in kwargs.items())
 
-        # Se não estiver no modo YOLO, solicitar permissão para ações que alteram estado
-        if not self.config.yolo_mode and tool_name in ("write_file", "run_command"):
+        # Ferramentas externas e testes podem alterar estado mesmo sem escrever arquivos diretamente.
+        needs_confirmation = tool_name not in self.READ_ONLY_TOOL_NAMES | {"web_search", "read_url"}
+        if not self.config.yolo_mode and needs_confirmation:
             confirm_msg = f"Deseja executar a ferramenta '{tool_name}' com os argumentos: {args_str}?"
             choice = ask_user_confirmation(confirm_msg)
             if choice == "abort":
@@ -256,7 +257,7 @@ class Agent:
                 if not self.config.yolo_mode:
                     choice = ask_user_confirmation(f"Aplicar modificação no arquivo '{block.file_path}'?")
                     if choice == "abort":
-                        break
+                        return final_assistant_text
                     elif choice == "yolo":
                         self.config.yolo_mode = True
                         console.print("[bold red]⚡ Modo YOLO ativado![/bold red]")
@@ -413,7 +414,7 @@ class Agent:
                 if not self.config.yolo_mode:
                     choice = ask_user_confirmation(f"Aplicar modificação no arquivo '{block.file_path}'?")
                     if choice == "abort":
-                        break
+                        return final_assistant_text
                     elif choice == "yolo":
                         self.config.yolo_mode = True
                         console.print("[bold red]⚡ Modo YOLO ativado![/bold red]")

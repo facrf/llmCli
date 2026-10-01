@@ -97,3 +97,15 @@ async def test_run_command_blocks_workspace_escape_and_dynamic_code():
     dynamic_code = await cmd_tool.execute(command="python3 -c 'print(1)'")
     assert dynamic_code.success is False
     assert "bloqueado por segurança" in dynamic_code.output
+
+    for command in (
+        "git -C=/etc status",
+        "git -C /etc status",
+        "git -C/etc status",
+        "cat --output=/etc/passwd",
+        "cat --output=../outside.txt",
+        "find . -exec echo test ;",
+    ):
+        result = await cmd_tool.execute(command=command)
+        assert result.success is False
+        assert "bloqueado por segurança" in result.output

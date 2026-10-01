@@ -4,9 +4,11 @@ from typing import AsyncGenerator, List, Optional
 import pytest
 
 from src.core.agent import Agent
+from src.core.multi_agent import MultiAgentCoordinator
 from src.core.session import Session
 from src.providers.base import ChatMessage, LLMProvider, StreamChunk
 from src.tools.base import ToolCall, ToolDefinition
+from src.tools.mcp_client import McpTool
 
 
 class MockStreamProvider(LLMProvider):
@@ -179,3 +181,63 @@ async def test_tester_role_receives_only_the_constrained_test_tool(monkeypatch):
     )
     response = await agent.run_role_prompt("tester", "Valide a suíte")
     assert response == "Testes analisados."
+
+
+@pytest.mark.asyncio
+async def test_mcp_tool_requires_confirmation(monkeypatch):
+    agent = Agent(session=Session())
+    monkeypatch.setattr(agent.config, "yolo_mode", False)
+    calls = []
+
+    async def runner(server_name, tool_name, arguments):
+        calls.append((server_name, tool_name, arguments))
+        return "executado"
+
+    tool = McpTool("db", "delete", "Delete rows", {}, runner)
+    agent.tools[tool.name] = tool
+    monkeypatch.setattr("src.core.agent.ask_user_confirmation", lambda _: "no")
+
+    result = await agent.execute_tool_with_permission(tool.name, {"query": "DELETE FROM data"})
+    assert result.success is False
+    assert calls == []
+
+
+@pytest.mark.asyncio
+async def test_provider_error_marks_role_failed(monkeypatch):
+    agent = Agent(session=Session())
+
+    class ErrorProvider(MockStreamProvider):
+        def __init__(self):
+            super().__init__([StreamChunk(is_done=True, error="provider unavailable")])
+
+    monkeypatch.setattr("src.core.agent.ProviderRegistry.create_provider", lambda *_: ErrorProvider())
+    coordinator = MultiAgentCoordinator(agent)
+
+    report = await coordinator._delegate("researcher", "Analise o projeto", None)
+    assert report.status == "failed"
+    assert "provider unavailable" in report.summary
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("editor_loop", [False, True])
+async def test_abort_patch_stops_remaining_tool_calls(monkeypatch, editor_loop):
+    agent = Agent(session=Session())
+    monkeypatch.setattr(agent.config, "yolo_mode", False)
+    monkeypatch.setattr("src.core.agent.ask_user_confirmation", lambda _: "abort")
+    target = agent.config.project_root / "tests" / "aborted_patch.txt"
+    assert not target.exists()
+
+    response = (
+        "Arquivo: tests/aborted_patch.txt\n"
+        "<<<<<<< SEARCH\n=======\nconteúdo\n>>>>>>> REPLACE\n"
+    )
+    tool_call = ToolCall("write", "write_file", {"path": "tests/aborted_patch.txt", "content": "tool"})
+    agent.provider = MockStreamProvider([StreamChunk(delta_content=response, tool_calls=[tool_call])])
+
+    if editor_loop:
+        await agent._run_editor_loop()
+    else:
+        await agent.run_prompt("Crie o arquivo")
+
+    assert not target.exists()
+    assert all(message.role != "tool" for message in agent.session.messages)

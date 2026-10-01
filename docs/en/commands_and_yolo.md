@@ -13,6 +13,7 @@
 | **File reads & searches** | Automatic | Automatic |
 | **File editing & writes** | Prompts for confirmation | **Executes automatically** |
 | **Terminal execution (`run_command`)** | Prompts for confirmation | **Executes automatically** |
+| **MCP tools and agent-run tests** | Prompts for confirmation | **Executes automatically** |
 | **Git Safety Checkpoints** | Creates snapshots before modifications | **Creates snapshots before modifications** |
 | **Rollback via `/undo`** | Available | **Fully Available** |
 

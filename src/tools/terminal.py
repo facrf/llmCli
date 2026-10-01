@@ -31,7 +31,10 @@ class RunCommandTool(BaseTool):
         "make", "mypy", "node", "npm", "npx", "php", "pytest", "python",
         "python3", "rg", "ruff", "sed", "tail",
     }
-    FORBIDDEN_ARGUMENTS = {"-c", "--command", "--global", "--prefix", "--work-tree", "--git-dir"}
+    FORBIDDEN_ARGUMENTS = {
+        "-c", "-C", "--command", "--global", "--prefix", "--work-tree", "--git-dir",
+        "-exec", "-execdir", "-ok", "-okdir", "--pre",
+    }
 
     def _parse_safe_command(self, command: str) -> tuple[Optional[list[str]], Optional[str]]:
         try:
@@ -43,19 +46,24 @@ class RunCommandTool(BaseTool):
             return None, "Comando vazio."
         if args[0] not in self.SAFE_EXECUTABLES:
             return None, f"Executável não permitido: {args[0]}."
-        if any(arg in self.FORBIDDEN_ARGUMENTS for arg in args[1:]):
+        if any(
+            arg.split("=", 1)[0] in self.FORBIDDEN_ARGUMENTS or arg.startswith("-C/")
+            for arg in args[1:]
+        ):
             return None, "Argumento não permitido por segurança."
 
         root = get_config().project_root.resolve()
         for arg in args[1:]:
+            # Opções como --output=/path também carregam caminhos após '='.
+            path_arg = arg.split("=", 1)[-1] if "=" in arg else arg
             # Reject paths that can escape the workspace. Absolute paths within it
             # remain valid, which is useful for tools that require an explicit path.
-            if arg.startswith("/"):
+            if path_arg.startswith("/"):
                 try:
-                    Path(arg).resolve().relative_to(root)
+                    Path(path_arg).resolve().relative_to(root)
                 except ValueError:
                     return None, f"Caminho fora do workspace não permitido: {arg}"
-            elif arg == ".." or arg.startswith("../") or "/../" in arg:
+            elif path_arg == ".." or path_arg.startswith("../") or "/../" in path_arg:
                 return None, f"Caminho que sai do workspace não permitido: {arg}"
         return args, None
 
